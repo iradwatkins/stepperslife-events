@@ -4,7 +4,6 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Ticket, Calendar, Heart, ShoppingCart } from "lucide-react";
-import { PendingInvitations } from "@/components/restaurants/PendingInvitations";
 
 export default function UserDashboardPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
@@ -20,9 +19,6 @@ export default function UserDashboardPage() {
           Manage your tickets, orders, and discover new events
         </p>
       </div>
-
-      {/* Pending Restaurant Invitations */}
-      <PendingInvitations variant="compact" />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
