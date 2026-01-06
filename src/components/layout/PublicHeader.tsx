@@ -66,10 +66,9 @@ export function PublicHeader({
   const navigationLinks = [
     { href: "/events", label: "Events" },
     { href: "/classes", label: "Classes" },
-    { href: "/services", label: "Services" },
-    { href: "/radio", label: "Radio" },
-    { href: "/marketplace", label: "Stores" },
-    { href: "/restaurants", label: "Restaurants" },
+    { href: "https://services.stepperslife.com", label: "Services" },
+    { href: "https://stores.stepperslife.com", label: "Stores" },
+    { href: "https://restaurants.stepperslife.com", label: "Restaurants" },
   ];
 
   const isActiveLink = (href: string) => {
