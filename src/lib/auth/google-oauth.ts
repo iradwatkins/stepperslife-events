@@ -107,7 +107,7 @@ function getRedirectUri(): string {
   }
   // Local development fallback
   else {
-    uri = "http://localhost:3004/api/auth/callback/google";
+    uri = "http://localhost:3001/api/auth/callback/google";
   }
 
   return uri;
