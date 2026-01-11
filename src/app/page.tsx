@@ -5,9 +5,6 @@ import { PublicFooter } from "@/components/layout/PublicFooter";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { HeroSection } from "@/components/home/HeroSection";
 import { EventsGrid } from "@/components/home/EventsGrid";
-import { RestaurantsShowcase } from "@/components/home/RestaurantsShowcase";
-import { ClassesSpotlight } from "@/components/home/ClassesSpotlight";
-import { ProductsSection } from "@/components/homepage/ProductsSection";
 import { TodaysEventsCard } from "@/components/home/TodaysEventsCard";
 
 // Initialize Convex client for server-side data fetching
@@ -36,21 +33,14 @@ async function fetchWithTimeout<T>(
   }
 }
 
-// Server Component - Unified Homepage for stepperslife.com
+// Server Component - Events Homepage for events.stepperslife.com
 export default async function HomePage() {
-  // Fetch data from all modules in parallel
-  const [events, products] = await Promise.all([
-    fetchWithTimeout(
-      convex.query(api.public.queries.getPublishedEvents, { limit: 100 }),
-      10000,
-      []
-    ),
-    fetchWithTimeout(
-      convex.query(api.products.queries.getActiveProducts),
-      10000,
-      []
-    ),
-  ]);
+  // Fetch events data
+  const events = await fetchWithTimeout(
+    convex.query(api.public.queries.getPublishedEvents, { limit: 100 }),
+    10000,
+    []
+  );
 
   // Remove duplicate events
   const uniqueEvents = events.filter(
@@ -61,7 +51,7 @@ export default async function HomePage() {
     <>
       <PublicHeader />
       <main className="min-h-screen bg-background">
-        {/* Hero Section - Main Landing */}
+        {/* Hero Section - Events Landing */}
         <HeroSection />
 
         {/* Staff/Organizer Quick Access - Today's Events to Scan */}
@@ -69,24 +59,9 @@ export default async function HomePage() {
           <TodaysEventsCard />
         </div>
 
-        {/* 1. Events Section - /events */}
+        {/* Events Grid */}
         <Suspense fallback={<SectionSkeleton title="Upcoming Events" />}>
           <EventsGrid events={uniqueEvents as any} />
-        </Suspense>
-
-        {/* 2. Classes Section - /classes */}
-        <Suspense fallback={<SectionSkeleton title="Classes" />}>
-          <ClassesSpotlight />
-        </Suspense>
-
-        {/* 3. Marketplace/Products Section - /marketplace */}
-        <Suspense fallback={<SectionSkeleton title="Marketplace" />}>
-          <ProductsSection products={products} />
-        </Suspense>
-
-        {/* 4. Restaurants Section - /restaurants */}
-        <Suspense fallback={<SectionSkeleton title="Restaurants" />}>
-          <RestaurantsShowcase />
         </Suspense>
       </main>
       <PublicFooter />
