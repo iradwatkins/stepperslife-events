@@ -38,6 +38,7 @@ export function PublicFooter() {
       links: [
         { href: "/events", label: "Browse Events" },
         { href: "https://classes.stepperslife.com", label: "Classes", external: true },
+        { href: "https://services.stepperslife.com", label: "Services", external: true },
         { href: "https://stores.stepperslife.com", label: "Stores", external: true },
         { href: "https://restaurants.stepperslife.com", label: "Restaurants", external: true },
         { href: "/my-tickets", label: "My Tickets" },
@@ -159,6 +160,11 @@ export function PublicFooter() {
               <li>
                 <a href="https://classes.stepperslife.com" className="hover:text-primary transition-colors">
                   Classes
+                </a>
+              </li>
+              <li>
+                <a href="https://services.stepperslife.com" className="hover:text-primary transition-colors">
+                  Services
                 </a>
               </li>
               <li>

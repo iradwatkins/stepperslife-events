@@ -1,6 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { jwtVerify } from "jose";
+import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
+
+const JWT_SECRET = getJwtSecretEncoded();
+
+// Verify user is authenticated and get their info
+async function verifyAuth(request: NextRequest): Promise<{ userId: string; role: string } | null> {
+  const token = request.cookies.get("session_token")?.value || request.cookies.get("auth-token")?.value;
+  if (!token) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return { userId: payload.userId as string, role: payload.role as string };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Connect/Save PayPal Account for Organizer
@@ -75,22 +92,42 @@ export async function POST(request: NextRequest) {
 /**
  * Get PayPal Account Status
  * GET /api/paypal/connect-account?userId=xxx
+ *
+ * SECURITY: User can only access their own PayPal data (or admins can access any)
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    // Verify authentication
+    const auth = await verifyAuth(request);
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Unauthorized - Authentication required" },
+        { status: 401 }
+      );
+    }
 
-    if (!userId) {
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get("userId");
+
+    if (!requestedUserId) {
       return NextResponse.json(
         { error: "User ID is required" },
         { status: 400 }
       );
     }
 
+    // Security: Users can only access their own PayPal data (admins can access any)
+    if (auth.userId !== requestedUserId && auth.role !== "admin") {
+      console.error(`[PayPal Connect] Unauthorized access attempt: ${auth.userId} tried to access ${requestedUserId}`);
+      return NextResponse.json(
+        { error: "Unauthorized - Cannot access other user's data" },
+        { status: 403 }
+      );
+    }
+
     // Get user's PayPal status from Convex
     const user = await fetchQuery(api.users.queries.getUserById, {
-      userId: userId as any,
+      userId: requestedUserId as any,
     });
 
     if (!user) {

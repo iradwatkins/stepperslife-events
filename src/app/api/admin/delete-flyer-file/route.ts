@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No filepath provided" }, { status: 400 });
     }
 
+    // Define allowed directory
+    const ALLOWED_DIR = "/root/websites/events-stepperslife/STEPFILES/event-flyers";
+
     // Extract filename from filepath
     // Handles both formats:
     // Old: /STEPFILES/event-flyers/filename.jpg
@@ -53,11 +56,21 @@ export async function POST(request: NextRequest) {
       filename = path.basename(filepath);
     }
 
+    // Security: Validate filename doesn't contain path traversal
+    if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+      console.error(`🚨 Path traversal attempt detected: ${filename}`);
+      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+    }
+
     // Construct full path to the file
-    const fullPath = path.join(
-      "/root/websites/events-stepperslife/STEPFILES/event-flyers",
-      filename
-    );
+    const fullPath = path.join(ALLOWED_DIR, filename);
+
+    // Security: Verify resolved path is within allowed directory
+    const resolvedPath = path.resolve(fullPath);
+    if (!resolvedPath.startsWith(ALLOWED_DIR)) {
+      console.error(`🚨 Path traversal attempt: ${resolvedPath} is outside ${ALLOWED_DIR}`);
+      return NextResponse.json({ error: "Invalid file path" }, { status: 400 });
+    }
 
     // Delete the physical file
     try {

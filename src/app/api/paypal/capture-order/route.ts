@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
     if (steppersLifeOrderId && captureData.status === "COMPLETED") {
       try {
         await getConvex().mutation(api.orders.mutations.markOrderPaid, {
-          orderId: steppersLifeOrderId as any,
+          orderId: steppersLifeOrderId as Id<"orders">,
           paymentIntentId: paypalOrderId, // Use PayPal order ID as payment reference
         });
 
