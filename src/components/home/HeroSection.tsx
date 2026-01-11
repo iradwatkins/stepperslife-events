@@ -63,8 +63,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           >
-            Your complete platform for Chicago Steppin - restaurants, events,
-            classes, and more
+            Discover Chicago Steppin events near you - sets, workshops, and social gatherings
           </motion.p>
 
           {/* Animated Buttons */}
@@ -80,7 +79,7 @@ export function HeroSection() {
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <Button asChild size="lg" className="text-lg shadow-lg shadow-primary/30">
-                <Link href="/events">Explore Events</Link>
+                <Link href="/events">Browse All Events</Link>
               </Button>
             </motion.div>
             <motion.div
@@ -89,7 +88,7 @@ export function HeroSection() {
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <Button asChild size="lg" variant="outline" className="text-lg bg-card/10 border-primary-foreground text-primary-foreground hover:bg-card/20">
-                <a href="https://stores.stepperslife.com">Browse Marketplace</a>
+                <Link href="/organizer/events/create">Create Event</Link>
               </Button>
             </motion.div>
           </motion.div>
