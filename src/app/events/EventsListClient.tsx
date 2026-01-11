@@ -532,7 +532,7 @@ export default function EventsListClient({
               >
                 <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-sm font-medium">
                   <Ticket className="w-4 h-4" />
-                  {events.length} Events Available
+                  {events.length > 0 ? `${events.length} Events Available` : "Discover Stepping Events"}
                 </span>
               </motion.div>
 
@@ -605,26 +605,20 @@ export default function EventsListClient({
                 </motion.div>
               </motion.div>
 
-              {/* Stats */}
-              <motion.div
-                className="mt-12 flex flex-wrap gap-8"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.7, delay: 0.5 }}
-              >
-                <div className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-white">{events.length}+</div>
-                  <div className="text-sm text-white/60">Active Events</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-white">1000+</div>
-                  <div className="text-sm text-white/60">Happy Steppers</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-white">50+</div>
-                  <div className="text-sm text-white/60">Cities</div>
-                </div>
-              </motion.div>
+              {/* Stats - Only show if there are events */}
+              {events.length > 0 && (
+                <motion.div
+                  className="mt-12 flex flex-wrap gap-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.7, delay: 0.5 }}
+                >
+                  <div className="text-center">
+                    <div className="text-3xl md:text-4xl font-bold text-white">{events.length}</div>
+                    <div className="text-sm text-white/60">Active Events</div>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
 

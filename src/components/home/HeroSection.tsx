@@ -89,7 +89,7 @@ export function HeroSection() {
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <Button asChild size="lg" variant="outline" className="text-lg bg-card/10 border-primary-foreground text-primary-foreground hover:bg-card/20">
-                <Link href="/marketplace">Browse Marketplace</Link>
+                <a href="https://stores.stepperslife.com">Browse Marketplace</a>
               </Button>
             </motion.div>
           </motion.div>

@@ -84,9 +84,9 @@ export function ProductsSection({ products }: ProductsSectionProps) {
           transition={{ duration: 0.6, delay: 0.3 }}
           whileHover={{ scale: 1.02, x: 5 }}
         >
-          <Link href="/marketplace" className="text-primary hover:underline font-medium">
+          <a href="https://stores.stepperslife.com" className="text-primary hover:underline font-medium">
             Visit Marketplace →
-          </Link>
+          </a>
         </motion.div>
       </motion.div>
 
@@ -113,13 +113,13 @@ export function ProductsSection({ products }: ProductsSectionProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Link
-              href="/marketplace"
+            <a
+              href="https://stores.stepperslife.com"
               className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
               <ShoppingBag className="w-5 h-5" />
               Explore Marketplace
-            </Link>
+            </a>
           </motion.div>
         </motion.div>
       ) : (
@@ -143,7 +143,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
-                <Link href={`/marketplace/${product._id}`} className="block group">
+                <a href={`https://stores.stepperslife.com/products/${product._id}`} className="block group">
                   <div className="relative h-48 bg-muted overflow-hidden">
                     {product.primaryImage ? (
                       <Image
@@ -214,7 +214,7 @@ export function ProductsSection({ products }: ProductsSectionProps) {
                       )}
                     </div>
                   </div>
-                </Link>
+                </a>
               </motion.div>
             </motion.div>
           ))}

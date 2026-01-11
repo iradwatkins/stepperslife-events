@@ -73,13 +73,13 @@ export function RestaurantsShowcase() {
               No restaurants are currently available. Check back soon for local dining options.
             </p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Link
-                href="/restaurants"
+              <a
+                href="https://restaurants.stepperslife.com"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 <UtensilsCrossed className="w-5 h-5" />
                 View Restaurants
-              </Link>
+              </a>
             </motion.div>
           </motion.div>
         </div>
@@ -164,7 +164,7 @@ function RestaurantsShowcaseContent({ restaurants }: { restaurants: Restaurant[]
             whileTap={{ scale: 0.98 }}
           >
             <Button asChild variant="outline" className="flex-shrink-0">
-              <Link href="/restaurants">View All Restaurants</Link>
+              <a href="https://restaurants.stepperslife.com">View All Restaurants</a>
             </Button>
           </motion.div>
         </motion.div>
@@ -181,8 +181,8 @@ function RestaurantsShowcaseContent({ restaurants }: { restaurants: Restaurant[]
               variants={cardVariants}
               custom={index}
             >
-              <Link
-                href={`/restaurants/${restaurant.slug}`}
+              <a
+                href={`https://restaurants.stepperslife.com/restaurants/${restaurant.slug}`}
                 className="group block h-full"
               >
                 <motion.article
@@ -291,7 +291,7 @@ function RestaurantsShowcaseContent({ restaurants }: { restaurants: Restaurant[]
                     )}
                   </div>
                 </motion.article>
-              </Link>
+              </a>
             </motion.div>
           ))}
         </motion.div>

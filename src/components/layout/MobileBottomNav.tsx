@@ -131,16 +131,18 @@ export function MobileBottomNav() {
       activePatterns: [/^\/events/],
     },
     {
-      href: "/marketplace",
+      href: "https://stores.stepperslife.com",
       icon: ShoppingBag,
       label: "Shop",
-      activePatterns: [/^\/marketplace/],
+      activePatterns: [],
+      isExternal: true,
     },
     {
-      href: "/restaurants",
+      href: "https://restaurants.stepperslife.com",
       icon: Utensils,
       label: "Food",
-      activePatterns: [/^\/restaurants/],
+      activePatterns: [],
+      isExternal: true,
     },
     {
       href: accountRoute,
@@ -160,13 +162,10 @@ export function MobileBottomNav() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.activePatterns);
+          const isExternal = "isExternal" in item && item.isExternal;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center flex-1 h-full relative"
-            >
+          const content = (
+            <>
               <div className="relative">
                 <Icon
                   className={`w-6 h-6 transition-colors ${
@@ -184,6 +183,28 @@ export function MobileBottomNav() {
               >
                 {item.label}
               </span>
+            </>
+          );
+
+          if (isExternal) {
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center justify-center flex-1 h-full relative"
+              >
+                {content}
+              </a>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center justify-center flex-1 h-full relative"
+            >
+              {content}
             </Link>
           );
         })}

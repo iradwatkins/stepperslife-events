@@ -84,13 +84,13 @@ export function ClassesSpotlight() {
               No classes are currently scheduled. Check back soon for upcoming dance classes and workshops.
             </p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Link
-                href="/classes"
+              <a
+                href="https://classes.stepperslife.com"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 <GraduationCap className="w-5 h-5" />
                 Browse Classes
-              </Link>
+              </a>
             </motion.div>
           </motion.div>
         </div>
@@ -133,7 +133,7 @@ export function ClassesSpotlight() {
             whileTap={{ scale: 0.98 }}
           >
             <Button asChild variant="outline" className="flex-shrink-0">
-              <Link href="/classes">Browse All Classes</Link>
+              <a href="https://classes.stepperslife.com">Browse All Classes</a>
             </Button>
           </motion.div>
         </motion.div>
@@ -150,8 +150,8 @@ export function ClassesSpotlight() {
               variants={cardVariants}
               custom={index}
             >
-              <Link
-                href={`/classes/${classItem._id}`}
+              <a
+                href={`https://classes.stepperslife.com/classes/${classItem._id}`}
                 className="group block h-full"
               >
                 <motion.article
@@ -284,7 +284,7 @@ export function ClassesSpotlight() {
                     </div>
                   </div>
                 </motion.article>
-              </Link>
+              </a>
             </motion.div>
           ))}
         </motion.div>

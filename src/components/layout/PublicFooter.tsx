@@ -37,8 +37,9 @@ export function PublicFooter() {
       title: "Resources",
       links: [
         { href: "/events", label: "Browse Events" },
-        { href: "/marketplace", label: "Stores" },
-        { href: "/restaurants", label: "Restaurants" },
+        { href: "https://classes.stepperslife.com", label: "Classes", external: true },
+        { href: "https://stores.stepperslife.com", label: "Stores", external: true },
+        { href: "https://restaurants.stepperslife.com", label: "Restaurants", external: true },
         { href: "/my-tickets", label: "My Tickets" },
       ],
     },
@@ -83,12 +84,21 @@ export function PublicFooter() {
                         <ul className="space-y-2 text-sm text-muted-foreground">
                           {section.links?.map((link) => (
                             <li key={link.href}>
-                              <Link
-                                href={link.href}
-                                className="hover:text-primary transition-colors block"
-                              >
-                                {link.label}
-                              </Link>
+                              {"external" in link && link.external ? (
+                                <a
+                                  href={link.href}
+                                  className="hover:text-primary transition-colors block"
+                                >
+                                  {link.label}
+                                </a>
+                              ) : (
+                                <Link
+                                  href={link.href}
+                                  className="hover:text-primary transition-colors block"
+                                >
+                                  {link.label}
+                                </Link>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -147,19 +157,19 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/classes" className="hover:text-primary transition-colors">
+                <a href="https://classes.stepperslife.com" className="hover:text-primary transition-colors">
                   Classes
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/marketplace" className="hover:text-primary transition-colors">
+                <a href="https://stores.stepperslife.com" className="hover:text-primary transition-colors">
                   Stores
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/restaurants" className="hover:text-primary transition-colors">
+                <a href="https://restaurants.stepperslife.com" className="hover:text-primary transition-colors">
                   Restaurants
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/my-tickets" className="hover:text-primary transition-colors">
