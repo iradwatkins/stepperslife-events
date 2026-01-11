@@ -20,6 +20,17 @@ crons.interval(
 );
 
 /**
+ * Expire Pending Orders (Abandoned Checkout)
+ * Runs every 5 minutes to expire PENDING orders from abandoned online checkouts
+ * This releases inventory when users abandon checkout before payment completes
+ */
+crons.interval(
+  "expire-pending-orders",
+  { minutes: 5 }, // Check every 5 minutes
+  internal.orders.cashPaymentsCron.expirePendingOrders
+);
+
+/**
  * Expire Hotel Reservations
  * Runs every 5 minutes to expire PENDING hotel reservations that have passed their 15-minute hold
  * This releases room inventory back to availability when checkout is abandoned

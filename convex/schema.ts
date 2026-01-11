@@ -824,6 +824,13 @@ export default defineSchema({
     // Platform debt settlement (extra amount taken from this order to settle cash payment debt)
     debtSettlementCents: v.optional(v.number()),
 
+    // Order lifecycle tracking
+    expiresAt: v.optional(v.number()), // When PENDING order should auto-expire
+
+    // Webhook idempotency tracking
+    webhookProcessedAt: v.optional(v.number()), // When webhook completed processing
+    paymentProcessedBy: v.optional(v.string()), // Webhook event ID that processed payment
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
