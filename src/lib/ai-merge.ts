@@ -9,6 +9,29 @@
  * - Other fields use longest value or union (for arrays)
  */
 
+interface SocialMedia {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+}
+
+interface TicketPriceEntry {
+  name: string;
+  price: string;
+  description?: string;
+}
+
+interface ContactEntry {
+  name: string;
+  phoneNumber?: string;
+  email?: string;
+  role?: string;
+  organization?: string;
+  socialMedia?: SocialMedia;
+}
+
+type ExtractedDataValue = string | boolean | string[] | TicketPriceEntry[] | ContactEntry[] | null | undefined;
+
 type ExtractedData = {
   eventName?: string | null;
   eventDate?: string | null;
@@ -29,24 +52,9 @@ type ExtractedData = {
   categories?: string[] | null;
   eventType?: string | null;
   containsSaveTheDateText?: boolean | null;
-  ticketPricesOnFlyer?: Array<{
-    name: string;
-    price: string;
-    description?: string;
-  }> | null;
-  contacts?: Array<{
-    name: string;
-    phoneNumber?: string;
-    email?: string;
-    role?: string;
-    organization?: string;
-    socialMedia?: {
-      instagram?: string;
-      facebook?: string;
-      twitter?: string;
-    };
-  }> | null;
-  [key: string]: any;
+  ticketPricesOnFlyer?: TicketPriceEntry[] | null;
+  contacts?: ContactEntry[] | null;
+  [key: string]: ExtractedDataValue;
 };
 
 /**
@@ -119,12 +127,13 @@ export function mergeAIExtractions(
         merged[key] = null;
       } else if (typeof values[0] === 'string') {
         // For strings, take the longest
-        merged[key] = values.reduce((longest, current) => {
-          if (typeof current === 'string' && current.length > (longest?.length || 0)) {
+        const stringValues = values.filter((v): v is string => typeof v === 'string');
+        merged[key] = stringValues.reduce((longest, current) => {
+          if (current.length > longest.length) {
             return current;
           }
           return longest;
-        }, values[0]);
+        }, stringValues[0] || '');
       } else {
         // For other types, use first non-null
         merged[key] = values[0];
@@ -141,11 +150,11 @@ export function mergeAIExtractions(
  * If all 3 disagree, use longest and log warning
  */
 function getMajorityValue(
-  value1: any,
-  value2: any,
-  value3: any,
+  value1: ExtractedDataValue,
+  value2: ExtractedDataValue,
+  value3: ExtractedDataValue,
   fieldName: string
-): any {
+): ExtractedDataValue {
   const values = [value1, value2, value3];
 
   // Filter out null/undefined
@@ -208,12 +217,15 @@ function getMajorityValue(
 
   // If all disagree and it's a string, prefer the longest
   if (maxCount === 1 && typeof value1 === 'string') {
-    const longest = nonNullValues.reduce((longest, current) => {
-      if (typeof current === 'string' && current.length > (longest?.length || 0)) {
+    const stringValues = nonNullValues.filter((v): v is string => typeof v === 'string');
+    if (stringValues.length === 0) return null;
+
+    const longest = stringValues.reduce((longest, current) => {
+      if (current.length > longest.length) {
         return current;
       }
       return longest;
-    }, nonNullValues[0]);
+    }, stringValues[0]);
 
     return longest;
   }
@@ -248,10 +260,10 @@ function mergeCategoriesArray(
  * Merge ticket prices - combine unique tickets by name
  */
 function mergeTicketPrices(
-  arr1?: Array<any> | null,
-  arr2?: Array<any> | null,
-  arr3?: Array<any> | null
-): Array<{name: string; price: string; description?: string}> {
+  arr1?: TicketPriceEntry[] | null,
+  arr2?: TicketPriceEntry[] | null,
+  arr3?: TicketPriceEntry[] | null
+): TicketPriceEntry[] {
   const ticketMap = new Map<string, {name: string; price: string; description?: string}>();
 
   [arr1, arr2, arr3].forEach(arr => {
@@ -275,18 +287,11 @@ function mergeTicketPrices(
  * Merge contacts - combine unique contacts by name/phone
  */
 function mergeContacts(
-  arr1?: Array<any> | null,
-  arr2?: Array<any> | null,
-  arr3?: Array<any> | null
-): Array<{
-  name: string;
-  phoneNumber?: string;
-  email?: string;
-  role?: string;
-  organization?: string;
-  socialMedia?: any;
-}> {
-  const contactMap = new Map<string, any>();
+  arr1?: ContactEntry[] | null,
+  arr2?: ContactEntry[] | null,
+  arr3?: ContactEntry[] | null
+): ContactEntry[] {
+  const contactMap = new Map<string, ContactEntry>();
 
   [arr1, arr2, arr3].forEach(arr => {
     if (Array.isArray(arr)) {
@@ -395,7 +400,7 @@ export function getVerificationSummary(
     if (!value1 && !value2 && !value3) continue;
 
     // Normalize for comparison
-    const normalize = (v: any) => {
+    const normalize = (v: ExtractedDataValue): string => {
       if (typeof v === 'string') return v.trim().toLowerCase();
       return JSON.stringify(v);
     };

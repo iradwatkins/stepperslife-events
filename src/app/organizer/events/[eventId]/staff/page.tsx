@@ -29,6 +29,36 @@ import Link from "next/link";
 
 type StaffRole = "STAFF" | "TEAM_MEMBERS" | "ASSOCIATES" | "MANAGER" | "SELLER";
 
+// Staff member interface
+interface StaffMember {
+  _id: Id<"eventStaff">;
+  name: string;
+  email: string;
+  phone?: string;
+  role: StaffRole;
+  commissionType?: "PERCENTAGE" | "FIXED";
+  commissionValue?: number;
+  commissionEarned: number;
+  ticketsSold?: number;
+  allocatedTickets?: number;
+  ticketsRemaining?: number;
+  hierarchyLevel?: number;
+  canAssignSubSellers?: boolean;
+  canScan?: boolean;
+  createdAt: number;
+  subSellers?: StaffMember[];
+  parentCommissionPercent?: number;
+  subSellerCommissionPercent?: number;
+}
+
+// User data from auth API
+interface CurrentUserData {
+  _id: string;
+  email: string;
+  name?: string;
+  role?: string;
+}
+
 // Recursive component for hierarchy tree visualization
 function HierarchyNode({
   staff,
@@ -36,9 +66,9 @@ function HierarchyNode({
   handleEditStaff,
   level = 0,
 }: {
-  staff: any;
+  staff: StaffMember;
   handleRemoveStaff: (id: Id<"eventStaff">) => void;
-  handleEditStaff: (staff: any) => void;
+  handleEditStaff: (staff: StaffMember) => void;
   level?: number;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -66,7 +96,7 @@ function HierarchyNode({
                 <span className="px-2 py-0.5 text-xs font-semibold bg-accent text-primary rounded-full">
                   {staff.role}
                 </span>
-                {staff.hierarchyLevel > 1 && (
+                {staff.hierarchyLevel && staff.hierarchyLevel > 1 && (
                   <span className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-full">
                     Level {staff.hierarchyLevel}
                   </span>
@@ -125,7 +155,7 @@ function HierarchyNode({
                   <div className="flex items-center gap-2 text-sm bg-accent px-3 py-2 rounded-lg">
                     <Users className="w-4 h-4 text-primary" />
                     <div className="flex flex-col">
-                      <span className="font-bold text-primary">{staff.subSellers.length}</span>
+                      <span className="font-bold text-primary">{staff.subSellers?.length}</span>
                       <span className="text-xs text-primary">sub-sellers</span>
                     </div>
                   </div>
@@ -162,7 +192,7 @@ function HierarchyNode({
       {/* Render sub-sellers recursively */}
       {isExpanded && hasSubSellers && (
         <div className="mt-2">
-          {staff.subSellers.map((subSeller: any) => (
+          {staff.subSellers?.map((subSeller: StaffMember) => (
             <HierarchyNode
               key={subSeller._id}
               staff={subSeller}
@@ -184,7 +214,7 @@ export default function StaffManagementPage() {
 
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showEditStaff, setShowEditStaff] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<any>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [showCopyRoster, setShowCopyRoster] = useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = useState<string>("");
   const [copyAllocations, setCopyAllocations] = useState(false);
@@ -201,7 +231,7 @@ export default function StaffManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<StaffRole>("MANAGER");
   const [viewMode, setViewMode] = useState<"list" | "hierarchy">("list");
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserData | null>(null);
 
   // Fetch current user from API
   useEffect(() => {
@@ -319,9 +349,10 @@ export default function StaffManagementPage() {
       setCanScan(false);
       setShowAddStaff(false);
       toast.success("Staff member added successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Add staff error:", error);
-      toast.error(error.message || "Failed to add staff member");
+      const errorMessage = error instanceof Error ? error.message : "Failed to add staff member";
+      toast.error(errorMessage);
     }
   };
 
@@ -333,13 +364,14 @@ export default function StaffManagementPage() {
     try {
       await removeStaffMember({ staffId });
       toast.success("Staff member removed successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Remove staff error:", error);
-      toast.error(error.message || "Failed to remove staff member");
+      const errorMessage = error instanceof Error ? error.message : "Failed to remove staff member";
+      toast.error(errorMessage);
     }
   };
 
-  const handleEditStaff = (staff: any) => {
+  const handleEditStaff = (staff: StaffMember) => {
     setEditingStaff(staff);
     setStaffName(staff.name);
     setStaffPhone(staff.phone || "");
@@ -347,7 +379,7 @@ export default function StaffManagementPage() {
     setCommissionType(staff.commissionType || "PERCENTAGE");
     setCommissionValue(
       staff.commissionType === "FIXED"
-        ? (staff.commissionValue / 100).toString()
+        ? ((staff.commissionValue || 0) / 100).toString()
         : staff.commissionValue?.toString() || ""
     );
     setShowEditStaff(true);
@@ -382,9 +414,10 @@ export default function StaffManagementPage() {
       setCanScan(false);
       setShowEditStaff(false);
       toast.success("Staff member updated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update staff error:", error);
-      toast.error(error.message || "Failed to update staff member");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update staff member";
+      toast.error(errorMessage);
     }
   };
 
@@ -397,9 +430,10 @@ export default function StaffManagementPage() {
         staffId,
         canAssignSubSellers: !currentValue,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update permissions error:", error);
-      toast.error(error.message || "Failed to update permissions");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update permissions";
+      toast.error(errorMessage);
     }
   };
 
@@ -425,9 +459,10 @@ export default function StaffManagementPage() {
       setShowCopyRoster(false);
       setSelectedSourceEvent("");
       setCopyAllocations(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Copy roster error:", error);
-      toast.error(error.message || "Failed to copy roster");
+      const errorMessage = error instanceof Error ? error.message : "Failed to copy roster";
+      toast.error(errorMessage);
     }
   };
 
@@ -470,9 +505,10 @@ export default function StaffManagementPage() {
       setBulkAction(null);
       setBulkAllocationValue("");
       setSelectedStaff(new Set());
-    } catch (error: any) {
+    } catch (error) {
       console.error("Bulk allocation error:", error);
-      toast.error(error.message || "Failed to update allocations");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update allocations";
+      toast.error(errorMessage);
     }
   };
 
@@ -502,9 +538,10 @@ export default function StaffManagementPage() {
       setBulkAction(null);
       setBulkCommissionValue("");
       setSelectedStaff(new Set());
-    } catch (error: any) {
+    } catch (error) {
       console.error("Bulk commission error:", error);
-      toast.error(error.message || "Failed to update commission");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update commission";
+      toast.error(errorMessage);
     }
   };
 
@@ -528,9 +565,10 @@ export default function StaffManagementPage() {
       setShowBulkActions(false);
       setBulkAction(null);
       setSelectedStaff(new Set());
-    } catch (error: any) {
+    } catch (error) {
       console.error("Bulk deactivate error:", error);
-      toast.error(error.message || "Failed to deactivate staff");
+      const errorMessage = error instanceof Error ? error.message : "Failed to deactivate staff";
+      toast.error(errorMessage);
     }
   };
 

@@ -53,6 +53,18 @@ const BundleEditor = dynamic(
 
 type TabType = "overview" | "orders" | "attendees" | "staff" | "discounts" | "bundles" | "waitlist";
 
+// Order type for type-safe filtering
+interface OrderData {
+  _id: string;
+  buyerName: string;
+  buyerEmail: string;
+  ticketCount: number;
+  totalCents: number;
+  status: "PENDING" | "PENDING_PAYMENT" | "COMPLETED" | "FAILED" | "CANCELLED" | "REFUNDED" | "DISPUTED";
+  createdAt: number;
+  paymentMethod?: string;
+}
+
 export default function EventDashboardPage() {
   const params = useParams();
   const router = useRouter();
@@ -169,8 +181,9 @@ export default function EventDashboardPage() {
     try {
       await publishEvent({ eventId });
       router.refresh();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to publish event");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to publish event";
+      toast.error(errorMessage);
     } finally {
       setIsPublishing(false);
     }
@@ -253,8 +266,9 @@ export default function EventDashboardPage() {
         applicableToTierIds: [],
       });
       setShowCreateDiscount(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create discount code");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create discount code";
+      toast.error(errorMessage);
     }
   };
 
@@ -267,24 +281,27 @@ export default function EventDashboardPage() {
         discountCodeId,
         isActive: !currentlyActive,
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update discount code");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update discount code";
+      toast.error(errorMessage);
     }
   };
 
   const handleDeleteDiscount = async (discountCodeId: Id<"discountCodes">) => {
     try {
       await deleteDiscountCode({ discountCodeId });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete discount code");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete discount code";
+      toast.error(errorMessage);
     }
   };
 
   const handleNotifyWaitlist = async (waitlistId: Id<"eventWaitlist">, email: string) => {
     try {
       await notifyWaitlistEntry({ waitlistId });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to notify waitlist entry");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to notify waitlist entry";
+      toast.error(errorMessage);
     }
   };
 
@@ -717,9 +734,9 @@ export default function EventDashboardPage() {
                   <h2 className="text-xl font-bold text-foreground">Orders</h2>
                   {orders && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {orders.filter((o: any) => o.status === "PENDING_PAYMENT").length > 0 && (
+                      {orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length > 0 && (
                         <span className="text-warning font-medium">
-                          {orders.filter((o: any) => o.status === "PENDING_PAYMENT").length} pending cash payment{orders.filter((o: any) => o.status === "PENDING_PAYMENT").length !== 1 ? "s" : ""}
+                          {orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length} pending cash payment{orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length !== 1 ? "s" : ""}
                         </span>
                       )}
                     </p>
@@ -748,11 +765,11 @@ export default function EventDashboardPage() {
                     >
                       <Clock className="w-4 h-4" />
                       Pending
-                      {orders && orders.filter((o: any) => o.status === "PENDING_PAYMENT").length > 0 && (
+                      {orders && orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length > 0 && (
                         <span className={`px-1.5 py-0.5 rounded-full text-xs ${
                           orderFilter === "pending" ? "bg-white/20" : "bg-warning text-white"
                         }`}>
-                          {orders.filter((o: any) => o.status === "PENDING_PAYMENT").length}
+                          {orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length}
                         </span>
                       )}
                     </button>
@@ -795,8 +812,8 @@ export default function EventDashboardPage() {
                 <tbody className="divide-y divide-border">
                   {orders && orders.length > 0 ? (
                     orders
-                      .filter((order: any) => orderFilter === "all" || order.status === "PENDING_PAYMENT")
-                      .map((order: any) => (
+                      .filter((order: OrderData) => orderFilter === "all" || order.status === "PENDING_PAYMENT")
+                      .map((order: OrderData) => (
                       <tr
                         key={order._id}
                         className={`hover:bg-muted ${
@@ -855,9 +872,10 @@ export default function EventDashboardPage() {
                                   } else {
                                     toast.success("Payment approved! Tickets are now valid.");
                                   }
-                                } catch (error: any) {
+                                } catch (error) {
                                   console.error("Failed to approve order:", error);
-                                  toast.error(error.message || "Failed to approve order");
+                                  const errorMessage = error instanceof Error ? error.message : "Failed to approve order";
+                                  toast.error(errorMessage);
                                 } finally {
                                   setApprovingOrderId(null);
                                 }
@@ -891,7 +909,7 @@ export default function EventDashboardPage() {
                     </tr>
                   )}
                   {orders && orders.length > 0 && orderFilter === "pending" &&
-                    orders.filter((o: any) => o.status === "PENDING_PAYMENT").length === 0 && (
+                    orders.filter((o: OrderData) => o.status === "PENDING_PAYMENT").length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                         <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-success" />
