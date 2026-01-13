@@ -6,12 +6,14 @@ import {
   passwordResetEmailTemplate,
   eventReminderEmailTemplate,
   vendorApprovalEmailTemplate,
+  emailVerificationEmailTemplate,
   type WelcomeEmailData,
   type TicketPurchaseEmailData,
   type OrderConfirmationEmailData,
   type PasswordResetEmailData,
   type EventReminderEmailData,
   type VendorApprovalEmailData,
+  type EmailVerificationEmailData,
 } from './templates'
 
 export type EmailResult = PostalEmailResult
@@ -70,6 +72,14 @@ export async function sendVendorApprovalEmail(
   data: VendorApprovalEmailData
 ): Promise<EmailResult> {
   const { subject, html } = vendorApprovalEmailTemplate(data)
+  return sendEmail(email, subject, html)
+}
+
+export async function sendEmailVerificationEmail(
+  email: string,
+  data: EmailVerificationEmailData
+): Promise<EmailResult> {
+  const { subject, html } = emailVerificationEmailTemplate(data)
   return sendEmail(email, subject, html)
 }
 

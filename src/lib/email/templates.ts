@@ -377,6 +377,45 @@ export function eventReminderEmailTemplate(data: EventReminderEmailData): { subj
   }
 }
 
+export interface EmailVerificationEmailData {
+  name: string
+  verificationCode: string
+  expiresIn: string
+}
+
+export function emailVerificationEmailTemplate(data: EmailVerificationEmailData): { subject: string; html: string } {
+  const content = `
+    <div class="card">
+      <div class="header">
+        <div class="logo">SteppersLife</div>
+      </div>
+      <h1 class="title">Verify Your Email Address</h1>
+      <p class="subtitle">Hi ${data.name}, thanks for signing up! Please verify your email to complete your registration.</p>
+
+      <div style="background: #fafafa; border: 2px solid #1a1a1a; border-radius: 4px; padding: 32px; text-align: center; margin: 24px 0;">
+        <p style="margin: 0 0 8px 0; color: #666666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+        <p style="margin: 0; font-size: 36px; font-weight: 700; font-family: 'SF Mono', Monaco, Consolas, monospace; color: #1a1a1a; letter-spacing: 8px;">${data.verificationCode}</p>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Enter this code on the verification page to activate your account.<br>
+        This code will expire in ${data.expiresIn}.
+      </p>
+
+      <div class="divider"></div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        If you didn't create an account on SteppersLife, you can safely ignore this email.
+      </p>
+    </div>
+  `
+
+  return {
+    subject: 'Verify Your SteppersLife Email',
+    html: wrapTemplate(content, 'Your verification code for SteppersLife')
+  }
+}
+
 export interface VendorApprovalEmailData {
   vendorName: string
   storeName: string

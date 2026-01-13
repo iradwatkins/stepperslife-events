@@ -3739,4 +3739,18 @@ export default defineSchema({
     .index("by_organizerId", ["organizerId"])
     .index("by_status", ["status"])
     .index("by_provider", ["provider"]),
+
+  // Email verification tokens for new user registration
+  emailVerificationTokens: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    code: v.string(), // 6-digit verification code (hashed)
+    expiresAt: v.number(), // Expiration timestamp (15 minutes)
+    verified: v.optional(v.boolean()), // Whether the token has been used
+    attempts: v.optional(v.number()), // Track failed verification attempts
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_email", ["email"])
+    .index("by_code", ["code"]),
 });
