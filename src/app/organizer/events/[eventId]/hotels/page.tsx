@@ -75,6 +75,25 @@ interface HotelFormData {
   roomTypes: RoomType[];
 }
 
+interface HotelPackageData {
+  _id: Id<"hotelPackages">;
+  hotelName: string;
+  address: string;
+  city: string;
+  state: string;
+  description?: string;
+  amenities?: string[];
+  starRating?: number;
+  checkInDate: number;
+  checkOutDate: number;
+  specialInstructions?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  roomTypes: RoomType[];
+  isActive: boolean;
+}
+
 const emptyFormData: HotelFormData = {
   hotelName: "",
   address: "",
@@ -170,7 +189,7 @@ export default function OrganizerHotelsPage() {
     setShowAddHotel(true);
   };
 
-  const handleEditPackage = (pkg: any) => {
+  const handleEditPackage = (pkg: HotelPackageData) => {
     setFormData({
       hotelName: pkg.hotelName,
       address: pkg.address,
@@ -261,9 +280,9 @@ export default function OrganizerHotelsPage() {
       setShowAddHotel(false);
       setFormData(emptyFormData);
       setEditingPackage(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Save error:", error);
-      toast.error(error.message || "Failed to save hotel package");
+      toast.error(error instanceof Error ? error.message : "Failed to save hotel package");
     }
   };
 
@@ -273,8 +292,8 @@ export default function OrganizerHotelsPage() {
       await deleteHotelPackage({ packageId: packageToDelete });
       toast.success("Hotel package deleted");
       setPackageToDelete(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete");
     }
   };
 
@@ -282,8 +301,8 @@ export default function OrganizerHotelsPage() {
     try {
       await toggleActive({ packageId });
       toast.success("Status updated");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update status");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update status");
     }
   };
 
@@ -291,8 +310,8 @@ export default function OrganizerHotelsPage() {
     try {
       await duplicatePackage({ packageId });
       toast.success("Hotel package duplicated");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to duplicate");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate");
     }
   };
 
@@ -314,7 +333,7 @@ export default function OrganizerHotelsPage() {
     });
   };
 
-  const updateRoomType = (index: number, field: keyof RoomType, value: any) => {
+  const updateRoomType = (index: number, field: keyof RoomType, value: string | number) => {
     const updated = [...formData.roomTypes];
     updated[index] = { ...updated[index], [field]: value };
     setFormData({ ...formData, roomTypes: updated });
@@ -568,8 +587,8 @@ export default function OrganizerHotelsPage() {
                                 await deleteHotelPackage({ packageId: pkg._id });
                                 toast.success("Hotel package deleted");
                                 setPackageToDelete(null);
-                              } catch (error: any) {
-                                toast.error(error.message || "Failed to delete");
+                              } catch (error) {
+                                toast.error(error instanceof Error ? error.message : "Failed to delete");
                               }
                             },
                           });
