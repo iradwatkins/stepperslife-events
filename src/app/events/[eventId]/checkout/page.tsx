@@ -20,6 +20,9 @@ import type { SelectedSeat } from "@/components/checkout/SeatSelection";
 import type { SelectedSeat as BallroomSeat } from "@/components/seating/InteractiveSeatingChart";
 import dynamic from "next/dynamic";
 
+// Union type for seats that can come from either seat selection component
+type AnySelectedSeat = SelectedSeat | BallroomSeat;
+
 // Dynamic imports for heavy seating components
 const SeatSelection = dynamic(() => import("@/components/checkout/SeatSelection"), {
   loading: () => (
@@ -98,7 +101,7 @@ export default function CheckoutPage() {
     discountAmountCents: number;
   } | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
-  const [selectedSeats, setSelectedSeats] = useState<SelectedSeat[]>([]);
+  const [selectedSeats, setSelectedSeats] = useState<AnySelectedSeat[]>([]);
 
   // Queries
   const eventDetails = useQuery(api.public.queries.getPublicEventDetails, { eventId });
@@ -151,8 +154,8 @@ export default function CheckoutPage() {
 
   const isLoading = eventDetails === undefined;
 
-  const selectedTier = eventDetails?.ticketTiers?.find((tier: any) => tier._id === selectedTierId);
-  const selectedBundle = eventDetails?.bundles?.find((bundle: any) => bundle._id === selectedBundleId);
+  const selectedTier = eventDetails?.ticketTiers?.find((tier) => tier._id === selectedTierId);
+  const selectedBundle = eventDetails?.bundles?.find((bundle) => bundle._id === selectedBundleId);
 
   // Payment config
   const paymentModel = paymentConfig?.paymentModel || "PREPAY";
@@ -167,7 +170,7 @@ export default function CheckoutPage() {
     purchaseType === "bundle" && selectedBundle
       ? selectedBundle.price * quantity
       : purchaseType === "tier" && selectedTier
-        ? (selectedTier as any).currentPrice * quantity
+        ? selectedTier.currentPrice * quantity
         : 0;
   const discountAmount = appliedDiscount?.discountAmountCents || 0;
   const subtotalAfterDiscount = Math.max(0, subtotal - discountAmount);
@@ -245,11 +248,15 @@ export default function CheckoutPage() {
   const handleSeatsSelected = (seats: SelectedSeat[]) => setSelectedSeats(seats);
 
   const handleBallroomSeatSelect = (seat: BallroomSeat) => {
-    setSelectedSeats((prev) => [...prev, seat as any]);
+    setSelectedSeats((prev) => [...prev, seat]);
   };
 
   const handleBallroomSeatDeselect = (seatId: string) => {
-    setSelectedSeats((prev) => prev.filter((s) => s.seatId !== seatId));
+    setSelectedSeats((prev) => prev.filter((s) => {
+      // Handle both seat types - check for 'id' (BallroomSeat) or 'seatId' (SelectedSeat)
+      if ('id' in s) return s.id !== seatId;
+      return s.seatId !== seatId;
+    }));
   };
 
   const handleCreateOrder = async () => {
@@ -293,14 +300,14 @@ export default function CheckoutPage() {
           referralCode: referralCode || undefined,
           discountCodeId: appliedDiscount?._id,
           discountAmountCents: appliedDiscount?.discountAmountCents,
-          selectedSeats: requiresSeats ? selectedSeats : undefined,
+          selectedSeats: requiresSeats ? selectedSeats.filter((s): s is SelectedSeat => 'seatId' in s) : undefined,
         });
       }
 
       setOrderId(newOrderId ?? null);
       return newOrderId ?? null;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create order");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create order");
       return null;
     }
   };
@@ -388,8 +395,8 @@ export default function CheckoutPage() {
       }
       setIsSuccess(true);
       toast.success("Cash order created! Pay organizer within 30 minutes to activate tickets.");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create cash order");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create cash order");
     }
     setIsProcessing(false);
   };
@@ -418,8 +425,8 @@ export default function CheckoutPage() {
       }
       setIsSuccess(true);
       toast.success("Order completed successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to complete order");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to complete order");
     }
     setIsProcessing(false);
   };
@@ -736,12 +743,12 @@ export default function CheckoutPage() {
               {ENABLE_SEATING && selectedTierId && purchaseType === "tier" && (seatingChart?.sections?.length ?? 0) > 0 && (
                 <div className="bg-card rounded-xl shadow-md p-6">
                   <h3 className="font-bold text-foreground text-lg mb-4">Select Your Seats</h3>
-                  {(seatingChart as any).seatingStyle === "TABLE_BASED" ? (
+                  {(seatingChart as { seatingStyle?: string } | undefined)?.seatingStyle === "TABLE_BASED" ? (
                     <InteractiveSeatingChart
                       eventId={eventId}
                       onSeatSelect={handleBallroomSeatSelect}
                       onSeatDeselect={handleBallroomSeatDeselect}
-                      selectedSeats={selectedSeats as any}
+                      selectedSeats={selectedSeats.filter((s): s is BallroomSeat => 'id' in s)}
                       className="min-h-[400px]"
                     />
                   ) : (

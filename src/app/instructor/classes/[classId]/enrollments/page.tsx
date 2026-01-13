@@ -23,6 +23,15 @@ import { toast } from "sonner";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
+interface TierData {
+  _id: Id<"ticketTiers">;
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  sold?: number;
+}
+
 interface PageProps {
   params: Promise<{ classId: string }>;
 }
@@ -107,13 +116,13 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
       resetForm();
       setShowAddTier(false);
       toast.success("Enrollment tier created successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Create tier error:", error);
-      toast.error(error.message || "Failed to create enrollment tier");
+      toast.error(error instanceof Error ? error.message : "Failed to create enrollment tier");
     }
   };
 
-  const handleEditTier = (tier: any) => {
+  const handleEditTier = (tier: TierData) => {
     setEditingTier(tier._id);
     setTierName(tier.name);
     setTierDescription(tier.description || "");
@@ -144,9 +153,9 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
       setEditingTier(null);
       setShowEditTier(false);
       toast.success("Enrollment tier updated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update tier error:", error);
-      toast.error(error.message || "Failed to update enrollment tier");
+      toast.error(error instanceof Error ? error.message : "Failed to update enrollment tier");
     }
   };
 
@@ -162,9 +171,9 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
           await deleteTier({ tierId });
           setTierToDelete(null);
           toast.success("Enrollment tier deleted successfully!");
-        } catch (error: any) {
+        } catch (error) {
           console.error("Delete tier error:", error);
-          toast.error(error.message || "Failed to delete enrollment tier");
+          toast.error(error instanceof Error ? error.message : "Failed to delete enrollment tier");
         }
       },
     });
@@ -190,9 +199,9 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
       setDuplicatingTierId(null);
       setDuplicateNewName("");
       toast.success("Enrollment tier duplicated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Duplicate tier error:", error);
-      toast.error(error.message || "Failed to duplicate enrollment tier");
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate enrollment tier");
     } finally {
       setIsDuplicating(false);
     }
@@ -271,8 +280,8 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
                       quantity: 50,
                     });
                     toast.success("Drop-in tier created!");
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to create tier");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Failed to create tier");
                   }
                 }}
                 className="p-4 border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors text-left"
@@ -297,8 +306,8 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
                       quantity: 20,
                     });
                     toast.success("5-Class pack created!");
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to create tier");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Failed to create tier");
                   }
                 }}
                 className="p-4 border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors text-left"
@@ -323,8 +332,8 @@ export default function ClassEnrollmentsPage({ params }: PageProps) {
                       quantity: 10,
                     });
                     toast.success("10-Class pack created!");
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to create tier");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Failed to create tier");
                   }
                 }}
                 className="p-4 border-2 border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors text-left"
