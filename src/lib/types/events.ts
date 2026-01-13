@@ -35,10 +35,10 @@ export type DressCode =
 export interface EventLocation {
   venueName?: string;
   address?: string;
-  city: string;
-  state: string;
+  city?: string;
+  state?: string;
   zipCode?: string;
-  country: string;
+  country?: string;
 }
 
 // Base event type (core fields)
@@ -139,4 +139,17 @@ export function getVenueName(location?: EventLocation | string): string | undefi
   if (!location) return undefined;
   if (typeof location === "string") return undefined;
   return location.venueName;
+}
+
+// Event list item type (for list/grid views)
+export interface EventListItem extends EventCardProps {
+  startDate?: number;
+  endDate?: number;
+  timezone?: string;
+  ticketsVisible?: boolean;
+  ticketsSold?: number;
+  capacity?: number;
+  status?: EventStatus;
+  organizerId?: string;
+  organizerName?: string;
 }

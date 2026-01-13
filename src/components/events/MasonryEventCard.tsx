@@ -12,8 +12,8 @@ interface MasonryEventCardProps {
     startDate?: number;
     timezone?: string;
     imageUrl?: string;
-    images: string[];
-    eventType: string;
+    images?: string[];
+    eventType?: string;
     ticketsVisible?: boolean;
     organizerName?: string;
     isClaimable?: boolean;
@@ -48,11 +48,13 @@ export function MasonryEventCard({ event }: MasonryEventCardProps) {
           <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
 
           {/* Event Type Badge - Top Left */}
-          <div className="absolute top-3 left-3">
-            <span className="px-3 py-1 text-xs font-semibold bg-card/90 backdrop-blur-sm rounded-full shadow-sm">
-              {event.eventType.replace("_", " ")}
-            </span>
-          </div>
+          {event.eventType && (
+            <div className="absolute top-3 left-3">
+              <span className="px-3 py-1 text-xs font-semibold bg-card/90 backdrop-blur-sm rounded-full shadow-sm">
+                {event.eventType.replace("_", " ")}
+              </span>
+            </div>
+          )}
 
           {/* Tickets Available Badge - Top Right */}
           {event.ticketsVisible && (

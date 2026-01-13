@@ -14,13 +14,53 @@ interface TicketTier {
   quantity: number;
   sold: number;
   available: number;
+  eventId?: Id<"events"> | string;
+  eventName?: string;
+}
+
+interface BundleData {
+  _id: Id<"ticketBundles">;
+  name: string;
+  description?: string;
+  price: number;
+  regularPrice?: number;
+  percentageSavings?: number;
+  includedTiers: IncludedTier[];
+  includedTiersDetails?: IncludedTierDetail[];
+  totalQuantity: number;
+  available: number;
+  sold: number;
+  saleStart?: number;
+  saleEnd?: number;
+  bundleType?: "SINGLE_EVENT" | "MULTI_EVENT";
+  eventIds?: Id<"events">[];
+  isActive: boolean;
+}
+
+interface IncludedTierDetail {
+  tierId: Id<"ticketTiers">;
+  tierName: string;
+  quantity: number;
+}
+
+interface CreateBundleData {
+  eventId: Id<"events">;
+  name: string;
+  description?: string;
+  price: number;
+  includedTiers: IncludedTier[];
+  totalQuantity: number;
+  saleStart?: number;
+  saleEnd?: number;
+  bundleType: "SINGLE_EVENT" | "MULTI_EVENT";
+  eventIds?: Id<"events">[];
 }
 
 interface IncludedTier {
   tierId: Id<"ticketTiers">;
   tierName: string;
   quantity: number;
-  eventId?: Id<"events">; // For multi-event bundles
+  eventId?: Id<"events"> | string; // For multi-event bundles
   eventName?: string; // For multi-event bundles
 }
 
@@ -104,7 +144,7 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
 
   const addTierToBundle = (
     tierId: Id<"ticketTiers">,
-    eventIdParam?: Id<"events">,
+    eventIdParam?: Id<"events"> | string,
     eventNameParam?: string
   ) => {
     const tier = availableTiers?.find((t) => t._id === tierId);
@@ -124,8 +164,8 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
 
     // Add event info for multi-event bundles
     if (formData.bundleType === "MULTI_EVENT") {
-      newTier.eventId = eventIdParam || (tier as any).eventId;
-      newTier.eventName = eventNameParam || (tier as any).eventName;
+      newTier.eventId = eventIdParam || tier.eventId;
+      newTier.eventName = eventNameParam || tier.eventName;
     }
 
     setFormData({
@@ -199,7 +239,7 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
     }
 
     try {
-      const bundleData: any = {
+      const bundleData: CreateBundleData = {
         eventId,
         name: formData.name,
         description: formData.description || undefined,
@@ -226,12 +266,13 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
       }
 
       resetForm();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save bundle");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save bundle";
+      toast.error(errorMessage);
     }
   };
 
-  const handleEdit = (bundle: any) => {
+  const handleEdit = (bundle: BundleData) => {
     setFormData({
       name: bundle.name,
       description: bundle.description || "",
@@ -252,19 +293,21 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
 
     try {
       await deleteBundle({ bundleId });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete bundle");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete bundle";
+      toast.error(errorMessage);
     }
   };
 
-  const handleToggleActive = async (bundle: any) => {
+  const handleToggleActive = async (bundle: BundleData) => {
     try {
       await updateBundle({
         bundleId: bundle._id,
         isActive: !bundle.isActive,
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update bundle status");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update bundle status";
+      toast.error(errorMessage);
     }
   };
 
@@ -411,9 +454,7 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
                       (t) => t._id === selectedTierId
                     );
                     if (selectedTier) {
-                      const evtId = (selectedTier as any).eventId;
-                      const evtName = (selectedTier as any).eventName;
-                      addTierToBundle(selectedTierId, evtId, evtName);
+                      addTierToBundle(selectedTierId, selectedTier.eventId, selectedTier.eventName);
                     }
                     e.target.value = "";
                   }
@@ -610,7 +651,7 @@ export function BundleEditor({ eventId }: BundleEditorProps) {
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {bundle.includedTiersDetails?.map((tier: any) => (
+                    {bundle.includedTiersDetails?.map((tier: IncludedTierDetail) => (
                       <div
                         key={tier.tierId}
                         className="text-xs px-2 py-1 bg-accent text-primary rounded"

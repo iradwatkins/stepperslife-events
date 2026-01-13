@@ -63,9 +63,10 @@ function CheckoutForm({
         // Payment is processing (common with Cash App)
         onPaymentSuccess({ paymentIntentId: paymentIntent.id });
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred");
-      onPaymentError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setErrorMessage(errorMessage);
+      onPaymentError(errorMessage);
       setIsProcessing(false);
     }
   };
@@ -170,11 +171,12 @@ export function FoodOrderStripeCheckout(props: FoodOrderStripeCheckoutProps) {
         console.log("[FoodOrderStripeCheckout] Payment intent created:", data.paymentIntentId);
         setClientSecret(data.clientSecret);
         setIsLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("[FoodOrderStripeCheckout] Error:", err);
-        setError(err.message || "Failed to initialize payment");
+        const errorMessage = err instanceof Error ? err.message : "Failed to initialize payment";
+        setError(errorMessage);
         setIsLoading(false);
-        props.onPaymentError(err.message || "Failed to initialize payment");
+        props.onPaymentError(errorMessage);
       }
     };
 

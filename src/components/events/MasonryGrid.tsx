@@ -1,9 +1,10 @@
 "use client";
 
 import { MasonryEventCard } from "./MasonryEventCard";
+import { EventCardProps } from "@/lib/types/events";
 
 interface MasonryGridProps {
-  events: any[];
+  events: EventCardProps[];
 }
 
 export function MasonryGrid({ events }: MasonryGridProps) {
@@ -21,7 +22,7 @@ export function MasonryGrid({ events }: MasonryGridProps) {
   // This reduces component renders by 66% and improves paint performance
   return (
     <div className="columns-2 sm:columns-3 md:columns-4 gap-3 sm:gap-4">
-      {events.map((event: any) => (
+      {events.map((event) => (
         <div key={event._id} className="break-inside-avoid mb-3 sm:mb-4">
           <MasonryEventCard event={event} />
         </div>

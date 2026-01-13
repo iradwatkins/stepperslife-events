@@ -1,9 +1,10 @@
 "use client";
 
 import { EventCard } from "./EventCard";
+import { EventCardProps } from "@/lib/types/events";
 
 interface GridViewProps {
-  events: any[];
+  events: EventCardProps[];
 }
 
 export function GridView({ events }: GridViewProps) {

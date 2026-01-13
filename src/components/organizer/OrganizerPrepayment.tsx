@@ -105,15 +105,17 @@ function PrepaymentForm({
           toast.dismiss(configToast);
           toast.success("Payment successful! Your event is now active.");
           onPaymentSuccess();
-        } catch (configError: any) {
+        } catch (configError) {
           toast.dismiss(configToast);
-          toast.error(configError.message || "Failed to configure event. Please contact support.");
+          const errorMessage = configError instanceof Error ? configError.message : "Failed to configure event. Please contact support.";
+          toast.error(errorMessage);
           setError("Payment succeeded but event configuration failed. Please contact support.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Payment error:", err);
-      setError(err.message || "An error occurred. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred. Please try again.";
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -256,9 +258,10 @@ function PayPalCreditPurchase({
       }
 
       return data.orderId;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create PayPal order:", err);
-      setError(err.message || "Failed to initialize PayPal payment");
+      const errorMessage = err instanceof Error ? err.message : "Failed to initialize PayPal payment";
+      setError(errorMessage);
       throw err;
     }
   }, [totalAmountCents, userId, estimatedTickets, pricePerTicket, eventId, eventName]);
@@ -296,14 +299,16 @@ function PayPalCreditPurchase({
         toast.dismiss(configToast);
         toast.success("Payment successful! Your event is now active.");
         onPaymentSuccess();
-      } catch (configError: any) {
+      } catch (configError) {
         toast.dismiss(configToast);
-        toast.error(configError.message || "Failed to configure event. Please contact support.");
+        const configErrorMessage = configError instanceof Error ? configError.message : "Failed to configure event. Please contact support.";
+        toast.error(configErrorMessage);
         setError("Payment succeeded but event configuration failed. Please contact support.");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("PayPal capture error:", err);
-      setError(err.message || "Payment failed. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "Payment failed. Please try again.";
+      setError(errorMessage);
       toast.error("Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
@@ -448,7 +453,7 @@ export function OrganizerPrepayment({
         setError(data.error || "Failed to initialize payment");
         toast.error(data.error || "Failed to initialize payment");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create payment intent:", err);
       setError("Failed to initialize payment. Please try again.");
       toast.error("Failed to initialize payment. Please try again.");

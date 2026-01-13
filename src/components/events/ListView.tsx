@@ -4,9 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { Calendar, MapPin, Ticket, ChevronRight } from "lucide-react";
 import { formatEventDateTime } from "@/lib/date-format";
+import { EventListItem } from "@/lib/types/events";
 
 interface ListViewProps {
-  events: any[];
+  events: EventListItem[];
 }
 
 export function ListView({ events }: ListViewProps) {
@@ -54,9 +55,11 @@ export function ListView({ events }: ListViewProps) {
                   </h3>
 
                   {/* Event Type Badge */}
-                  <span className="inline-block px-3 py-1 text-xs font-semibold bg-accent text-primary rounded-full">
-                    {event.eventType.replace("_", " ")}
-                  </span>
+                  {event.eventType && (
+                    <span className="inline-block px-3 py-1 text-xs font-semibold bg-accent text-primary rounded-full">
+                      {event.eventType.replace("_", " ")}
+                    </span>
+                  )}
                 </div>
 
                 <ChevronRight className="w-6 h-6 text-muted-foreground ml-4 flex-shrink-0" />
@@ -72,14 +75,20 @@ export function ListView({ events }: ListViewProps) {
                   <span>{formatEventDateTime(event.startDate, event.timezone)}</span>
                 </div>
 
-                {event.location && (event.location.city || event.location.state) && (
+                {event.location && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="w-4 h-4 flex-shrink-0" />
                     <span>
-                      {event.location.venueName && `${event.location.venueName}, `}
-                      {event.location.city && event.location.state
-                        ? `${event.location.city}, ${event.location.state}`
-                        : event.location.city || event.location.state}
+                      {typeof event.location === "string"
+                        ? event.location
+                        : (
+                          <>
+                            {event.location.venueName && `${event.location.venueName}, `}
+                            {event.location.city && event.location.state
+                              ? `${event.location.city}, ${event.location.state}`
+                              : event.location.city || event.location.state}
+                          </>
+                        )}
                     </span>
                   </div>
                 )}

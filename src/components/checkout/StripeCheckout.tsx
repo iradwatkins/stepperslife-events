@@ -68,9 +68,10 @@ function CheckoutForm({
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         onPaymentSuccess({ paymentIntentId: paymentIntent.id });
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred");
-      onPaymentError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setErrorMessage(errorMessage);
+      onPaymentError(errorMessage);
       setIsProcessing(false);
     }
   };
@@ -167,10 +168,11 @@ export function StripeCheckout(props: StripeCheckoutProps) {
 
         setClientSecret(data.clientSecret);
         setIsLoading(false);
-      } catch (err: any) {
-        setError(err.message || "Failed to initialize payment");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to initialize payment";
+        setError(errorMessage);
         setIsLoading(false);
-        props.onPaymentError(err.message || "Failed to initialize payment");
+        props.onPaymentError(errorMessage);
       }
     };
 

@@ -18,14 +18,15 @@ interface EventCardProps {
     description: string;
     startDate?: number;
     timezone?: string;
-    location: {
-      city: string;
-      state: string;
-    };
-    images: string[];
+    location?: {
+      city?: string;
+      state?: string;
+      venueName?: string;
+    } | string;
+    images?: string[];
     imageUrl?: string;
-    eventType: string;
-    categories: string[];
+    eventType?: string;
+    categories?: string[];
     ticketsVisible?: boolean;
     organizerName?: string;
     isClaimable?: boolean;
@@ -68,11 +69,11 @@ export function EventCard({ event, showSocialProof = true }: EventCardProps) {
             {/* Event Sub-Type Badge (Stepping-specific) */}
             {event.eventSubType ? (
               <EventTypeBadge subType={event.eventSubType} size="sm" />
-            ) : (
+            ) : event.eventType ? (
               <span className="px-3 py-1 text-xs font-semibold bg-card/90 backdrop-blur-sm rounded-full shadow-sm">
                 {event.eventType.replace("_", " ")}
               </span>
-            )}
+            ) : null}
 
             {/* Beginner Friendly Badge */}
             {event.beginnerFriendly && (
@@ -121,13 +122,15 @@ export function EventCard({ event, showSocialProof = true }: EventCardProps) {
           </div>
 
           {/* Location */}
-          {event.location && (event.location.city || event.location.state) && (
+          {event.location && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
               <span>
-                {event.location.city && event.location.state
-                  ? `${event.location.city}, ${event.location.state}`
-                  : event.location.city || event.location.state}
+                {typeof event.location === "string"
+                  ? event.location
+                  : event.location.city && event.location.state
+                    ? `${event.location.city}, ${event.location.state}`
+                    : event.location.city || event.location.state || ""}
               </span>
             </div>
           )}

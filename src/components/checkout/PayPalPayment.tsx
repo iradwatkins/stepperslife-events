@@ -3,9 +3,29 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
+// PayPal SDK types
+interface PayPalButtonsConfig {
+  style: {
+    layout: string;
+    color: string;
+    shape: string;
+    label: string;
+  };
+  createOrder: () => Promise<string>;
+  onApprove: (data: { orderID: string }) => Promise<void>;
+  onCancel: () => void;
+  onError: (err: Error) => void;
+}
+
+interface PayPalNamespace {
+  Buttons: (config: PayPalButtonsConfig) => {
+    render: (selector: string) => Promise<void>;
+  };
+}
+
 declare global {
   interface Window {
-    paypal?: any;
+    paypal?: PayPalNamespace;
   }
 }
 
@@ -114,9 +134,10 @@ export function PayPalPayment({
             }
 
             return data.orderId;
-          } catch (error: any) {
+          } catch (error) {
             setIsProcessing(false);
-            onError(error.message || "Failed to create PayPal order");
+            const errorMessage = error instanceof Error ? error.message : "Failed to create PayPal order";
+            onError(errorMessage);
             throw error;
           }
         },
@@ -142,8 +163,9 @@ export function PayPalPayment({
             } else {
               onError("Payment was not completed");
             }
-          } catch (error: any) {
-            onError(error.message || "Failed to capture payment");
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to capture payment";
+            onError(errorMessage);
           } finally {
             setIsProcessing(false);
           }
@@ -152,7 +174,7 @@ export function PayPalPayment({
           setIsProcessing(false);
           console.log("[PayPal] Payment cancelled by user");
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
           setIsProcessing(false);
           console.error("[PayPal] Button error:", err);
           onError("PayPal encountered an error");
@@ -162,7 +184,7 @@ export function PayPalPayment({
       .then(() => {
         setIsLoading(false);
       })
-      .catch((err: any) => {
+      .catch((err: Error) => {
         console.error("[PayPal] Failed to render buttons:", err);
         setIsLoading(false);
         onError("Failed to load PayPal buttons");
