@@ -26,7 +26,7 @@ if (!STRIPE_SECRET_KEY) {
 }
 
 if (!STRIPE_WEBHOOK_SECRET) {
-  console.error("[Stripe Webhook] WARNING: STRIPE_WEBHOOK_SECRET is not set!");
+  console.error("[Stripe Webhook] CRITICAL: STRIPE_WEBHOOK_SECRET is not set! Webhooks will be rejected.");
 }
 
 // Initialize Stripe client
@@ -71,38 +71,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No signature", requestId }, { status: 400 });
     }
 
-    // Verify webhook signature - REQUIRED in production
+    // Verify webhook signature - REQUIRED in ALL environments (fail-closed security)
     let event: Stripe.Event;
-    const isProduction = process.env.NODE_ENV === "production";
 
-    if (STRIPE_WEBHOOK_SECRET) {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
-      } catch (err: unknown) {
-        console.error(`[Stripe Webhook] [${requestId}] Signature verification failed:`, getErrorMessage(err));
-        return NextResponse.json(
-          { error: "Webhook signature verification failed", requestId },
-          { status: 400 }
-        );
-      }
-    } else if (isProduction) {
-      // Reject unverified webhooks in production
-      console.error(`[Stripe Webhook] [${requestId}] CRITICAL: No webhook secret in production!`);
+    // SECURITY: Always require webhook signature verification
+    // This prevents payment fraud from forged webhook events
+    if (!STRIPE_WEBHOOK_SECRET) {
+      console.error(`[Stripe Webhook] [${requestId}] CRITICAL: STRIPE_WEBHOOK_SECRET not configured - rejecting webhook`);
       return NextResponse.json(
-        { error: "Webhook verification required", requestId },
-        { status: 403 }
+        { error: "Webhook security not configured", requestId },
+        { status: 500 }
       );
-    } else {
-      // Parse event without verification (development only)
-      console.warn(`[Stripe Webhook] [${requestId}] DEV ONLY: Processing webhook without signature verification`);
-      try {
-        event = JSON.parse(body) as Stripe.Event;
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid webhook payload", requestId },
-          { status: 400 }
-        );
-      }
+    }
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
+    } catch (err: unknown) {
+      console.error(`[Stripe Webhook] [${requestId}] Signature verification failed:`, getErrorMessage(err));
+      return NextResponse.json(
+        { error: "Webhook signature verification failed", requestId },
+        { status: 400 }
+      );
     }
 
 

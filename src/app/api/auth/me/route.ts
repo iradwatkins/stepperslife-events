@@ -7,16 +7,14 @@ import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
 
 const JWT_SECRET = getJwtSecretEncoded();
 
-// Admin emails - keep in sync with convex/lib/roles.ts
-const ADMIN_EMAILS = [
-  "bobbygwatkins@gmail.com",
-  "iradwatkins@gmail.com",
-] as const;
-
-function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase() as typeof ADMIN_EMAILS[number]);
-}
-
+/**
+ * Get current authenticated user
+ *
+ * Admin status is determined from the user's role in the database.
+ * The admin email list is maintained in convex/lib/roles.ts and
+ * admin role is assigned during user creation/login via the
+ * isAdminEmail() check in Convex mutations.
+ */
 export async function GET(request: NextRequest) {
   try {
     const token =
@@ -38,10 +36,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Add isAdmin flag based on ADMIN_EMAILS check
+    // Admin flag comes from the user's role in the database
+    // This is set during user creation/login in Convex based on isAdminEmail()
     const userWithAdminFlag = {
       ...user,
-      isAdmin: isAdminEmail(user.email),
+      isAdmin: user.role === "admin",
     };
 
     return NextResponse.json({ user: userWithAdminFlag }, { status: 200 });

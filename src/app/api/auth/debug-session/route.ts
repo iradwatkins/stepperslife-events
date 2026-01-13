@@ -2,7 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+/**
+ * Debug session endpoint - DEVELOPMENT ONLY
+ *
+ * This endpoint is disabled in production to prevent information disclosure.
+ * It exposes session token details which could be a security risk.
+ */
 export async function GET(request: NextRequest) {
+  // SECURITY: Disable in production
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Debug endpoint disabled in production" },
+      { status: 403 }
+    );
+  }
+
   try {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session_token");
@@ -24,6 +38,8 @@ export async function GET(request: NextRequest) {
         hasSession: true,
         payload: payload,
         tokenLength: sessionToken.value.length,
+        // Don't expose secret-related info even in dev
+        environment: "development",
       });
     } catch (error) {
       return NextResponse.json({

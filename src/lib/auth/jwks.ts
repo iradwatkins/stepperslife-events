@@ -16,6 +16,7 @@ const KEY_ID = "stepperslife-auth-key-1";
 let cachedPrivateKey: KeyObject | null = null;
 let cachedPublicKey: KeyObject | null = null;
 let cachedJwks: { keys: JWK[] } | null = null;
+let usingEphemeralKeys = false;
 
 /**
  * Get or generate RSA keypair from environment variable
@@ -40,12 +41,24 @@ function getKeyPair(): { privateKey: KeyObject; publicKey: KeyObject } {
     cachedPrivateKey = createPrivateKey(decodedPrivate);
     cachedPublicKey = createPublicKey(decodedPublic);
   } else {
-    // Generate a deterministic keypair from JWT_SECRET for development
-    // WARNING: In production, you should use proper RSA keys stored in environment
-    console.warn(
-      "[JWKS] No JWT_PRIVATE_KEY/JWT_PUBLIC_KEY found. " +
-      "Generating ephemeral keypair. This should only happen in development."
-    );
+    // SECURITY WARNING: No RSA keys configured
+    const isProduction = process.env.NODE_ENV === "production";
+
+    if (isProduction) {
+      // In production, this is a CRITICAL security issue
+      console.error(
+        "[JWKS] CRITICAL SECURITY ERROR: JWT_PRIVATE_KEY and JWT_PUBLIC_KEY environment variables are not set!\n" +
+        "This MUST be configured for production. Convex token signing will use ephemeral keys.\n" +
+        "Tokens will become INVALID on server restart!\n" +
+        "Run: openssl genrsa -out private.pem 2048 && openssl rsa -in private.pem -pubout -out public.pem\n" +
+        "Then base64-encode and add to environment variables."
+      );
+    } else {
+      console.warn(
+        "[JWKS] DEV ONLY: No JWT_PRIVATE_KEY/JWT_PUBLIC_KEY found. " +
+        "Generating ephemeral keypair. This should only happen in development."
+      );
+    }
 
     // Generate a new keypair (this is ephemeral and will change on restart)
     const { privateKey, publicKey } = generateKeyPairSync("rsa", {
@@ -56,6 +69,7 @@ function getKeyPair(): { privateKey: KeyObject; publicKey: KeyObject } {
 
     cachedPrivateKey = createPrivateKey(privateKey);
     cachedPublicKey = createPublicKey(publicKey);
+    usingEphemeralKeys = true;
   }
 
   return { privateKey: cachedPrivateKey, publicKey: cachedPublicKey };
@@ -112,4 +126,25 @@ export function clearKeyCache(): void {
   cachedPrivateKey = null;
   cachedPublicKey = null;
   cachedJwks = null;
+  usingEphemeralKeys = false;
+}
+
+/**
+ * Check if we're using ephemeral (insecure) keys
+ * This returns true if RSA keys are not properly configured via environment variables
+ */
+export function isUsingEphemeralKeys(): boolean {
+  // Initialize keys if not already cached
+  if (!cachedPrivateKey) {
+    getKeyPair();
+  }
+  return usingEphemeralKeys;
+}
+
+/**
+ * Check if RSA keys are properly configured
+ * Returns true if JWT_PRIVATE_KEY and JWT_PUBLIC_KEY are set
+ */
+export function hasConfiguredKeys(): boolean {
+  return !!(process.env.JWT_PRIVATE_KEY && process.env.JWT_PUBLIC_KEY);
 }
