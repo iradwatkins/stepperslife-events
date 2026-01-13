@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import { convexClient as convex } from "@/lib/auth/convex-client";
-import {
-  hashPassword,
-  validatePasswordStrength,
-  validateEmailFormat,
-} from "@/lib/auth/password-utils";
+import { hashPassword } from "@/lib/auth/password-utils";
 import {
   checkRateLimit,
   getClientIp,
@@ -13,51 +9,55 @@ import {
   createRateLimitResponse,
 } from "@/lib/rate-limit";
 import { sendEmailVerificationEmail } from "@/lib/email/send";
+import { registerSchema } from "@/lib/validations/schemas";
+import { createRequestLogger, securityLogger } from "@/lib/logging/logger";
+import { z } from "zod";
 
 // Email verification API - will be available after `npx convex dev` regenerates types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const emailVerificationApi = (api as any).emailVerification?.mutations;
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request);
+  const clientIp = getClientIp(request);
+
   try {
     // Rate limiting - 5 attempts per minute per IP
-    const clientIp = getClientIp(request);
     const rateLimit = checkRateLimit(`register:${clientIp}`, rateLimiters.auth);
 
     if (!rateLimit.success) {
+      securityLogger.rateLimited(`register:${clientIp}`, "/api/auth/register", clientIp);
       return createRateLimitResponse(rateLimit.retryAfter || 60);
     }
 
-    const body = await request.json();
-    const { name, email, password } = body;
-
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Please provide all required fields" }, { status: 400 });
+    // Parse and validate request body with Zod
+    let validatedData;
+    try {
+      const body = await request.json();
+      validatedData = registerSchema.parse(body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const message = error.issues.map((e) => e.message).join(", ");
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    if (!validateEmailFormat(email)) {
-      return NextResponse.json({ error: "Please provide a valid email address" }, { status: 400 });
-    }
+    const { name, email, password } = validatedData;
 
-    const passwordValidation = validatePasswordStrength(password);
-    if (!passwordValidation.valid) {
-      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
-    }
+    logger.debug("Registration attempt", { email });
 
     // Check if user already exists
-    try {
-      const existingUser = await convex.query(api.users.queries.getUserByEmail, {
-        email: email.toLowerCase(),
-      });
+    const existingUser = await convex.query(api.users.queries.getUserByEmail, {
+      email,
+    });
 
-      if (existingUser) {
-        return NextResponse.json(
-          { error: "An account with this email already exists" },
-          { status: 409 }
-        );
-      }
-    } catch {
-      // User not found - this is expected, continue with registration
+    if (existingUser) {
+      logger.debug("Registration failed - user exists", { email });
+      return NextResponse.json(
+        { error: "An account with this email already exists" },
+        { status: 409 }
+      );
     }
 
     // Hash the password
@@ -65,22 +65,26 @@ export async function POST(request: NextRequest) {
 
     // Create the user in Convex
     const userId = await convex.mutation(api.users.mutations.createUser, {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
+      name,
+      email,
       passwordHash: hashedPassword,
       role: "user",
     });
 
     if (!userId) {
+      logger.error("Failed to create user account");
       return NextResponse.json({ error: "Failed to create user account" }, { status: 500 });
     }
+
+    logger.info("User created successfully", { userId, email });
 
     // Initialize credits for the new user (non-blocking)
     try {
       await convex.mutation(api.credits.mutations.initializeCredits, {
         organizerId: userId,
       });
-    } catch {
+    } catch (creditError) {
+      logger.warn("Failed to initialize credits", { userId, error: String(creditError) });
       // Non-fatal - credits can be initialized later
     }
 
@@ -90,32 +94,37 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create verification token in database
-      // Note: emailVerificationApi may be undefined until convex types are regenerated
       if (emailVerificationApi?.createVerificationToken) {
         await convex.mutation(emailVerificationApi.createVerificationToken, {
           userId,
-          email: email.toLowerCase().trim(),
+          email,
           codeHash,
         });
+        logger.debug("Verification token created", { userId });
       } else {
-        console.warn("[Register] Email verification API not available - run 'npx convex dev' to regenerate types");
+        logger.warn("Email verification API not available");
       }
 
       // Send verification email
-      const emailResult = await sendEmailVerificationEmail(email.toLowerCase().trim(), {
-        name: name.trim(),
+      const emailResult = await sendEmailVerificationEmail(email, {
+        name,
         verificationCode,
         expiresIn: "15 minutes",
       });
 
       if (!emailResult.success) {
-        console.error("[Register] Verification email failed:", emailResult.error);
+        logger.warn("Verification email failed", { email, error: emailResult.error });
         // Continue - user can request resend
+      } else {
+        logger.debug("Verification email sent", { email });
       }
     } catch (verificationError) {
-      console.error("[Register] Verification setup failed:", verificationError);
+      logger.error("Verification setup failed", verificationError instanceof Error ? verificationError : undefined);
       // Continue - user can request resend
     }
+
+    securityLogger.authSuccess(userId, email, "registration", clientIp);
+    logger.logWithTiming("info", "Registration completed");
 
     return NextResponse.json(
       {
@@ -127,7 +136,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("[Register] Error:", error);
+    logger.error("Registration error", error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: "An error occurred during registration. Please try again." },
       { status: 500 }

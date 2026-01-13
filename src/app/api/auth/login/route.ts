@@ -9,30 +9,51 @@ import {
   rateLimiters,
   createRateLimitResponse,
 } from "@/lib/rate-limit";
+import { loginSchema, ValidationError } from "@/lib/validations/schemas";
+import { createRequestLogger, securityLogger } from "@/lib/logging/logger";
 
 export async function POST(request: NextRequest) {
+  const logger = createRequestLogger(request);
+  const clientIp = getClientIp(request);
+
   try {
     // Rate limiting - 5 attempts per minute per IP
-    const clientIp = getClientIp(request);
     const rateLimit = checkRateLimit(`login:${clientIp}`, rateLimiters.auth);
 
     if (!rateLimit.success) {
+      securityLogger.rateLimited(`login:${clientIp}`, "/api/auth/login", clientIp);
       return createRateLimitResponse(rateLimit.retryAfter || 60);
     }
 
-    const body = await request.json();
-    const { email, password } = body;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    // Parse and validate request body with Zod
+    let validatedData;
+    try {
+      const body = await request.json();
+      validatedData = loginSchema.parse(body);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return NextResponse.json(error.toJSON(), { status: 400 });
+      }
+      // Zod error - use issues property
+      if (error && typeof error === "object" && "issues" in error) {
+        const zodError = error as { issues: Array<{ message: string }> };
+        const message = zodError.issues.map((e) => e.message).join(", ");
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
+
+    const { email, password } = validatedData;
+
+    logger.debug("Login attempt", { email });
 
     // Get user from Convex
     const user = await convex.query(api.users.queries.getUserByEmail, {
-      email: email.toLowerCase(),
+      email,
     });
 
     if (!user || !user.passwordHash) {
+      securityLogger.authFailure(email, "User not found or no password", clientIp);
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
@@ -40,8 +61,12 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await verifyPassword(password, user.passwordHash);
 
     if (!isValidPassword) {
+      securityLogger.authFailure(email, "Invalid password", clientIp);
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
+
+    // Check if email is verified (soft check - allow login but flag)
+    const requiresVerification = user.emailVerified !== true;
 
     // Create response
     const response = NextResponse.json(
@@ -52,7 +77,9 @@ export async function POST(request: NextRequest) {
           email: user.email,
           name: user.name,
           role: user.role,
+          emailVerified: user.emailVerified === true,
         },
+        requiresVerification,
       },
       { status: 200 }
     );
@@ -69,15 +96,14 @@ export async function POST(request: NextRequest) {
       request
     );
 
+    securityLogger.authSuccess(user._id, user.email, "password", clientIp);
+    logger.logWithTiming("info", "Login successful");
+
     return response;
   } catch (error) {
-    console.error("[Login] Login error:", error);
-    console.error("[Login] Error details:", error instanceof Error ? error.message : String(error));
+    logger.error("Login error", error instanceof Error ? error : undefined);
     return NextResponse.json(
-      {
-        error: "Internal server error",
-        debug: error instanceof Error ? error.message : String(error),
-      },
+      { error: "An error occurred during login. Please try again." },
       { status: 500 }
     );
   }

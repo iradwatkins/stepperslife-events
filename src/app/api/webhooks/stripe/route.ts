@@ -4,6 +4,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { randomUUID } from "crypto";
+import { paymentLogger, createRequestLogger } from "@/lib/logging/logger";
 
 /** Type-safe error message extraction */
 function getErrorMessage(error: unknown): string {
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Stripe Webhook] [${requestId}] Processing event ${event.id} (${event.type})`);
-
+    paymentLogger.webhookReceived("stripe", event.type);
 
     // Handle the event
     let orderId: string | undefined;
@@ -167,6 +168,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true, requestId });
   } catch (error: unknown) {
     console.error(`[Stripe Webhook] [${requestId}] Processing error:`, error);
+    paymentLogger.webhookError("stripe", getErrorMessage(error));
     return NextResponse.json(
       { error: getErrorMessage(error) || "Webhook processing failed", requestId },
       { status: 500 }
@@ -237,6 +239,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       orderId: orderId as Id<"orders">,
       paymentIntentId: paymentIntent.id,
     });
+
+    // Log successful payment
+    paymentLogger.paymentCompleted(orderId, paymentIntent.amount, "stripe", paymentIntent.id);
 
     // Record debt settlement if this payment included a settlement amount
     const settlementAmount = parseInt(metadata?.settlementAmount || "0", 10);
@@ -499,11 +504,16 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   }
 
   try {
+    const errorMessage = paymentIntent.last_payment_error?.message || "Payment failed";
+
     // Update order status to failed in Convex
     await convex.mutation(api.orders.mutations.markOrderFailed, {
       orderId: orderId as Id<"orders">,
-      reason: paymentIntent.last_payment_error?.message || "Payment failed",
+      reason: errorMessage,
     });
+
+    // Log payment failure
+    paymentLogger.paymentFailed(orderId, "stripe", errorMessage);
 
   } catch (error: unknown) {
     console.error(`[Stripe Webhook] Failed to update order ${orderId}:`, getErrorMessage(error));
@@ -554,6 +564,16 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       refundAmount: charge.amount_refunded,
       refundReason: charge.refunds?.data[0]?.reason || "requested_by_customer",
     });
+
+    // Log successful refund
+    if (result.success && !result.alreadyRefunded) {
+      paymentLogger.refundProcessed(
+        paymentIntentId,
+        charge.amount_refunded,
+        "stripe",
+        charge.refunds?.data[0]?.id || "unknown"
+      );
+    }
 
     // If refund was processed successfully, send notification email
     if (result.success && !result.alreadyRefunded) {
