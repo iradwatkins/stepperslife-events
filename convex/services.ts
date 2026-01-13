@@ -66,6 +66,27 @@ export const getFeaturedProviders = query({
   },
 });
 
+// Get recently added providers (for homepage)
+export const getRecentProviders = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const providers = await ctx.db
+      .query("serviceProviders")
+      .withIndex("by_status", (q) => q.eq("status", "APPROVED"))
+      .collect();
+
+    // Filter active providers and sort by creation date (newest first)
+    const filtered = providers
+      .filter((p) => p.isActive)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .slice(0, args.limit || 8);
+
+    return filtered;
+  },
+});
+
 // Get provider by slug
 export const getProviderBySlug = query({
   args: {

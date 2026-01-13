@@ -11,8 +11,23 @@
  * 3. Install ioredis: npm install ioredis
  */
 
+/**
+ * Redis client interface (minimal interface needed for rate limiting)
+ */
+interface RedisClientInterface {
+  connect(): Promise<void>;
+  pipeline(): {
+    hgetall(key: string): unknown;
+    exec(): Promise<Array<[Error | null, unknown]>>;
+  };
+  hset(key: string, values: Record<string, string>): Promise<number>;
+  pexpire(key: string, ms: number): Promise<number>;
+  on(event: string, callback: (...args: unknown[]) => void): void;
+  get(key: string): Promise<string | null>;
+}
+
 // Dynamic import for ioredis (only loaded if REDIS_URL is set)
-let redisClient: any = null;
+let redisClient: RedisClientInterface | null = null;
 let redisAvailable = false;
 let redisCheckDone = false;
 
@@ -58,7 +73,7 @@ async function initRedis(): Promise<boolean> {
     }
 
     const Redis = ioredisModule.default;
-    redisClient = new Redis(redisUrl, {
+    const client: RedisClientInterface = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) return null;
@@ -67,21 +82,22 @@ async function initRedis(): Promise<boolean> {
       lazyConnect: true,
     });
 
-    await redisClient.connect();
+    await client.connect();
+    redisClient = client;
     redisAvailable = true;
     console.log("[RateLimit] Redis connected - using distributed rate limiting");
 
     // Handle connection errors gracefully
-    redisClient.on("error", (err: Error) => {
-      console.error("[RateLimit] Redis error:", err.message);
+    client.on("error", () => {
+      console.error("[RateLimit] Redis error");
       redisAvailable = false;
     });
 
-    redisClient.on("reconnecting", () => {
+    client.on("reconnecting", () => {
       console.log("[RateLimit] Redis reconnecting...");
     });
 
-    redisClient.on("connect", () => {
+    client.on("connect", () => {
       redisAvailable = true;
       console.log("[RateLimit] Redis reconnected");
     });
@@ -129,9 +145,16 @@ async function checkRateLimitRedis(
   const { windowMs, maxRequests } = config;
   const key = `ratelimit:${identifier}`;
 
+  // Ensure client is available
+  if (!redisClient) {
+    return checkRateLimitMemory(identifier, config);
+  }
+
+  const client = redisClient;
+
   try {
     // Use Redis transaction for atomic operations
-    const pipeline = redisClient.pipeline();
+    const pipeline = client.pipeline();
 
     // Get current count and timestamp
     pipeline.hgetall(key);
@@ -160,12 +183,12 @@ async function checkRateLimitRedis(
     }
 
     // Update Redis
-    await redisClient.hset(key, {
+    await client.hset(key, {
       count: count.toString(),
       firstRequest: firstRequest.toString(),
     });
     // Set expiration slightly longer than window to handle edge cases
-    await redisClient.pexpire(key, windowMs + 1000);
+    await client.pexpire(key, windowMs + 1000);
 
     if (count > maxRequests) {
       const retryAfter = Math.ceil((firstRequest + windowMs - now) / 1000);

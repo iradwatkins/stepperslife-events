@@ -928,6 +928,7 @@ export const bootstrapAdmin = mutation({
       PRIMARY_ADMIN_EMAIL,
       "admin-test@stepperslife.com",
       "platformadmin@stepperslife.com",
+      "test-organizer@stepperslife.com",
     ];
 
     if (!adminEmails.includes(args.email.toLowerCase())) {
@@ -974,6 +975,63 @@ export const bootstrapAdmin = mutation({
       email: user.email,
       role: "admin",
       message: "User upgraded to admin successfully",
+    };
+  },
+});
+
+/**
+ * DEV ONLY: Upgrade user to organizer by email
+ * This bypasses normal auth for local testing
+ */
+export const devUpgradeToOrganizer = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by email
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase()))
+      .first();
+
+    if (!user) {
+      throw new Error(`User not found: ${args.email}`);
+    }
+
+    // Update role to organizer
+    await ctx.db.patch(user._id, {
+      role: "organizer",
+      canCreateTicketedEvents: true,
+      acceptsStripePayments: true,
+      acceptsPaypalPayments: true,
+      acceptsCashPayments: true,
+      updatedAt: Date.now(),
+    });
+
+    // Initialize organizer credits if not exists
+    const existingCredits = await ctx.db
+      .query("organizerCredits")
+      .withIndex("by_organizer", (q) => q.eq("organizerId", user._id))
+      .first();
+
+    if (!existingCredits) {
+      await ctx.db.insert("organizerCredits", {
+        organizerId: user._id,
+        creditsTotal: 100,
+        creditsUsed: 0,
+        creditsRemaining: 100,
+        firstEventFreeUsed: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    console.log("[devUpgradeToOrganizer] User upgraded:", args.email);
+
+    return {
+      success: true,
+      email: user.email,
+      role: "organizer",
     };
   },
 });

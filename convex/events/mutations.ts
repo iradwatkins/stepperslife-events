@@ -1694,3 +1694,132 @@ export const bulkUnpublishEvents = mutation({
     };
   },
 });
+
+/**
+ * DEV ONLY: Create test event without auth
+ * This bypasses normal auth for local testing
+ */
+export const devCreateTestEvent = mutation({
+  args: {
+    organizerEmail: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Find organizer by email
+    const organizer = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.organizerEmail.toLowerCase()))
+      .first();
+
+    if (!organizer) {
+      throw new Error(`Organizer not found: ${args.organizerEmail}`);
+    }
+
+    if (organizer.role !== "organizer") {
+      throw new Error(`User is not an organizer: ${args.organizerEmail}`);
+    }
+
+    // Create event date: 30 days from now
+    const eventDate = new Date();
+    eventDate.setDate(eventDate.getDate() + 30);
+    eventDate.setHours(19, 0, 0, 0);
+    const startDate = eventDate.getTime();
+    eventDate.setHours(23, 0, 0, 0);
+    const endDate = eventDate.getTime();
+
+    // Create the event
+    const eventId = await ctx.db.insert("events", {
+      organizerId: organizer._id,
+      organizerName: organizer.name || organizer.email,
+      name: "Test Steppers Event 2025",
+      description: "A test event for E2E testing with multiple ticket tiers including Free, General Admission, and VIP options.",
+      eventType: "TICKETED_EVENT",
+      eventSubType: "set",
+      categories: ["Set", "Test"],
+      startDate,
+      endDate,
+      timezone: "America/Chicago",
+      eventDateLiteral: "Test Event Date",
+      eventTimeLiteral: "7:00 PM - 11:00 PM",
+      eventTimezone: "America/Chicago",
+      location: {
+        venueName: "Chicago Steppers Ballroom",
+        address: "500 S Michigan Ave",
+        city: "Chicago",
+        state: "IL",
+        zipCode: "60605",
+        country: "USA",
+      },
+      capacity: 175,
+      imageUrl: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800",
+      status: "PUBLISHED",
+      ticketsVisible: true,
+      paymentModelSelected: true,
+      ticketsSold: 0,
+      allowWaitlist: true,
+      allowTransfers: true,
+      maxTicketsPerOrder: 10,
+      minTicketsPerOrder: 1,
+      dressCode: "stepping_attire",
+      beginnerFriendly: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create ticket tiers
+    const ticketTiers = [
+      { name: "Free Entry", description: "Complimentary entry. Standing room only.", price: 0, quantity: 50 },
+      { name: "General Admission", description: "Standard entry with reserved seating.", price: 2500, quantity: 100 },
+      { name: "VIP Experience", description: "Premium front-row seating, VIP lounge access, and complimentary drinks.", price: 7500, quantity: 25 },
+    ];
+
+    const tierIds: Id<"ticketTiers">[] = [];
+    for (const tier of ticketTiers) {
+      const tierId = await ctx.db.insert("ticketTiers", {
+        eventId,
+        name: tier.name,
+        description: tier.description,
+        price: tier.price,
+        quantity: tier.quantity,
+        sold: 0,
+        saleStart: now,
+        saleEnd: startDate,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      tierIds.push(tierId);
+    }
+
+    // Update event with ticket tier count
+    await ctx.db.patch(eventId, {
+      ticketTierCount: ticketTiers.length,
+    });
+
+    // Create payment config
+    await ctx.db.insert("eventPaymentConfig", {
+      eventId,
+      organizerId: organizer._id,
+      paymentModel: "CREDIT_CARD",
+      customerPaymentMethods: ["STRIPE", "PAYPAL", "CASH"],
+      platformFeePercent: 3.7,
+      platformFeeFixed: 179,
+      processingFeePercent: 2.9,
+      charityDiscount: false,
+      lowPriceDiscount: false,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    console.log("[devCreateTestEvent] Created test event:", eventId);
+
+    return {
+      success: true,
+      eventId,
+      tierIds,
+      name: "Test Steppers Event 2025",
+    };
+  },
+});

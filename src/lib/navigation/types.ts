@@ -38,7 +38,7 @@ export interface NavItem {
   requiredRoles?: AllRoles[];
 
   /** Optional permission check function */
-  permission?: (user: any) => boolean;
+  permission?: (user: NavUser | null) => boolean;
 
   /** Whether to open in new tab */
   external?: boolean;
@@ -70,7 +70,7 @@ export interface NavSubmenuItem {
   description?: string;
 
   /** Permission check */
-  permission?: (user: any) => boolean;
+  permission?: (user: NavUser | null) => boolean;
 }
 
 /**

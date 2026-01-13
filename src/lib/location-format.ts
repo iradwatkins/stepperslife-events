@@ -1,8 +1,22 @@
 /**
+ * Location object structure
+ */
+export interface LocationObject {
+  venueName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+export type LocationInput = string | LocationObject | null | undefined;
+
+/**
  * Utility function to format event location for display
  * Handles both legacy string format and new object format
  */
-export function formatEventLocation(location: any): string {
+export function formatEventLocation(location: LocationInput): string {
   if (!location) return '';
 
   // Handle legacy string format
@@ -29,7 +43,7 @@ export function formatEventLocation(location: any): string {
 /**
  * Get full address string including street address
  */
-export function formatFullAddress(location: any): string {
+export function formatFullAddress(location: LocationInput): string {
   if (!location) return '';
 
   if (typeof location === 'string') return location;
