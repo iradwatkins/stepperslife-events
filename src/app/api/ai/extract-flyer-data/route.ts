@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { jwtVerify } from "jose";
 import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
 
 const JWT_SECRET = getJwtSecretEncoded();
 
-// Gemini 1.5 Flash (FREE tier, PRIMARY)
-// Free: 1,500 requests/day, 60/min - no credit card required
-// Get key at: https://aistudio.google.com/app/apikey
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
-
-// Ollama (self-hosted, FALLBACK) - for local development
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+// Open WebUI Configuration (self-hosted, uses Ollama backend)
+// Model: qwen2.5vl:7b - Best open source OCR (~75% accuracy, GPT-4o level)
+const OPENWEBUI_BASE_URL = process.env.OPENWEBUI_BASE_URL;
+const OPENWEBUI_API_KEY = process.env.OPENWEBUI_API_KEY;
+const OPENWEBUI_MODEL = process.env.OPENWEBUI_MODEL || "qwen2.5vl:7b";
 
 // Type definitions for extracted data
 interface ExtractedData {
@@ -60,7 +55,7 @@ interface ExtractionResult {
   warning?: string;
 }
 
-// Comprehensive extraction prompt (shared between providers)
+// Comprehensive extraction prompt - Two-Phase extraction strategy
 const EXTRACTION_PROMPT = `EXPERT EVENT FLYER EXTRACTION PROMPT - TWO-PHASE EXTRACTION
 
 You are an expert at extracting event information from party flyers, club flyers, and promotional event materials.
@@ -216,7 +211,6 @@ async function verifyAuth(request: NextRequest): Promise<{ userId: string; role:
 
 /**
  * Extract image data from filepath via URL fetch
- * Note: Local file reading is not available on Vercel serverless functions
  */
 async function getImageData(filepath: string): Promise<{ base64: string; mimeType: string }> {
   // Build the full URL
@@ -315,77 +309,60 @@ function parseExtractionResponse(
 }
 
 /**
- * Extract flyer data using Gemini 1.5 Flash (FREE tier)
- * Primary provider - works in production on Coolify
+ * Extract flyer data using Open WebUI (self-hosted)
+ * Uses OpenAI-compatible API with vision model (qwen2.5vl:7b)
  */
-async function extractWithGemini(
+async function extractWithOpenWebUI(
   base64Image: string,
   mimeType: string
 ): Promise<ExtractionResult> {
-  if (!genAI) {
-    throw new Error("Gemini API not configured - GEMINI_API_KEY not set");
+  if (!OPENWEBUI_BASE_URL || !OPENWEBUI_API_KEY) {
+    throw new Error("Open WebUI not configured - OPENWEBUI_BASE_URL and OPENWEBUI_API_KEY required");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  const result = await model.generateContent([
-    EXTRACTION_PROMPT,
-    {
-      inlineData: {
-        data: base64Image,
-        mimeType,
-      },
-    },
-  ]);
-
-  const response = await result.response;
-  const extractedText = response.text();
-
-  if (!extractedText) {
-    throw new Error("No response from Gemini");
-  }
-
-  return parseExtractionResponse(extractedText, "gemini-1.5-flash");
-}
-
-/**
- * Extract flyer data using Ollama Vision (self-hosted)
- * Fallback provider - for local development
- */
-async function extractWithOllama(base64Image: string): Promise<ExtractionResult> {
-  const ollamaResponse = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+  const response = await fetch(`${OPENWEBUI_BASE_URL}/api/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENWEBUI_API_KEY}`,
+    },
     body: JSON.stringify({
-      model: "llama3.2-vision:11b",
-      prompt: EXTRACTION_PROMPT,
-      images: [base64Image],
-      stream: false,
-      options: {
-        temperature: 0.1,
-        num_predict: 4096,
-      },
+      model: OPENWEBUI_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: EXTRACTION_PROMPT },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64Image}` },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 4096,
     }),
   });
 
-  if (!ollamaResponse.ok) {
-    const errorText = await ollamaResponse.text();
-    throw new Error(`Ollama API error: ${ollamaResponse.status} ${errorText}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Open WebUI API error: ${response.status} ${errorText}`);
   }
 
-  const ollamaData = await ollamaResponse.json();
-  const extractedText = ollamaData.response;
+  const data = await response.json();
+  const extractedText = data.choices?.[0]?.message?.content;
 
   if (!extractedText) {
-    throw new Error("No response from Ollama");
+    throw new Error("No response from Open WebUI");
   }
 
-  return parseExtractionResponse(extractedText, "ollama-llama3.2-vision");
+  return parseExtractionResponse(extractedText, OPENWEBUI_MODEL);
 }
 
 /**
  * Main POST handler
- * Uses Gemini (FREE) as primary, Ollama as fallback
+ * Uses Open WebUI with qwen2.5vl:7b (self-hosted, GPT-4o level OCR)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -419,31 +396,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try Gemini first (FREE tier), fallback to Ollama
+    // Extract using Open WebUI
     let result: ExtractionResult;
-    let fallbackUsed = false;
-
-    if (genAI) {
-      // Primary: Gemini 1.5 Flash (FREE)
-      try {
-        result = await extractWithGemini(imageData.base64, imageData.mimeType);
-      } catch (geminiError) {
-        console.warn("[AI Extraction] Gemini failed, trying Ollama fallback:", geminiError);
-
-        // Fallback to Ollama (local dev)
-        try {
-          result = await extractWithOllama(imageData.base64);
-          fallbackUsed = true;
-        } catch (ollamaError) {
-          console.error("[AI Extraction] Both Gemini and Ollama failed");
-          throw new Error(
-            `AI extraction failed. Gemini: ${geminiError instanceof Error ? geminiError.message : "Unknown"}. Ollama: ${ollamaError instanceof Error ? ollamaError.message : "Unknown"}`
-          );
-        }
-      }
-    } else {
-      // No Gemini key - use Ollama only
-      result = await extractWithOllama(imageData.base64);
+    try {
+      result = await extractWithOpenWebUI(imageData.base64, imageData.mimeType);
+    } catch (error) {
+      console.error("[AI Extraction] Open WebUI failed:", error);
+      throw new Error(
+        `AI extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
 
     // Return the result
@@ -464,7 +425,6 @@ export async function POST(request: NextRequest) {
       success: true,
       extractedData: result.extractedData,
       provider: result.provider,
-      fallbackUsed,
       ...(result.warning && { warning: result.warning }),
     });
   } catch (error) {
@@ -484,36 +444,36 @@ export async function POST(request: NextRequest) {
  * GET handler to check AI provider status
  */
 export async function GET() {
-  const geminiAvailable = !!process.env.GEMINI_API_KEY;
+  const openwebuiConfigured = !!(OPENWEBUI_BASE_URL && OPENWEBUI_API_KEY);
 
-  // Check Ollama availability
-  let ollamaAvailable = false;
-  try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
-      method: "GET",
-      signal: AbortSignal.timeout(5000),
-    });
-    ollamaAvailable = response.ok;
-  } catch {
-    ollamaAvailable = false;
+  // Check Open WebUI availability
+  let openwebuiAvailable = false;
+  if (openwebuiConfigured) {
+    try {
+      const response = await fetch(`${OPENWEBUI_BASE_URL}/api/models`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${OPENWEBUI_API_KEY}`,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      openwebuiAvailable = response.ok;
+    } catch {
+      openwebuiAvailable = false;
+    }
   }
 
   return NextResponse.json({
     providers: {
-      gemini: {
-        available: geminiAvailable,
-        model: "gemini-1.5-flash",
-        tier: "FREE",
-        primary: true,
-      },
-      ollama: {
-        available: ollamaAvailable,
-        url: OLLAMA_BASE_URL,
-        model: "llama3.2-vision:11b",
-        primary: false,
+      openwebui: {
+        available: openwebuiAvailable,
+        configured: openwebuiConfigured,
+        url: OPENWEBUI_BASE_URL || "not configured",
+        model: OPENWEBUI_MODEL,
+        description: "Self-hosted Open WebUI with Ollama backend",
       },
     },
-    strategy: "Gemini (FREE) primary, Ollama fallback",
-    recommendation: geminiAvailable ? "gemini" : ollamaAvailable ? "ollama" : "none",
+    strategy: "Open WebUI (self-hosted) with qwen2.5vl:7b",
+    recommendation: openwebuiAvailable ? "openwebui" : "none",
   });
 }
