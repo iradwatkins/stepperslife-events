@@ -3753,4 +3753,22 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
     .index("by_code", ["code"]),
+
+  // Session tokens for session revocation support
+  sessionTokens: defineTable({
+    userId: v.id("users"),
+    tokenHash: v.string(), // SHA-256 hash of the JWT token ID (jti claim)
+    userAgent: v.optional(v.string()), // Browser/device info
+    ipAddress: v.optional(v.string()), // Last known IP
+    isRevoked: v.boolean(), // Whether this session has been revoked
+    revokedAt: v.optional(v.number()), // When the session was revoked
+    revokedReason: v.optional(v.string()), // Reason for revocation (logout, security, admin)
+    lastActiveAt: v.number(), // Last activity timestamp
+    expiresAt: v.number(), // Token expiration timestamp
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_tokenHash", ["tokenHash"])
+    .index("by_userId_active", ["userId", "isRevoked"])
+    .index("by_expiresAt", ["expiresAt"]),
 });
