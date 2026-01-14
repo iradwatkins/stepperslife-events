@@ -33,7 +33,13 @@ export async function GET(request: NextRequest) {
       const tokenIdentifier = `${baseUrl}|convex|${payload.userId}`;
 
       // Get the RSA private key for signing
-      const privateKey = await getPrivateKey();
+      let privateKey;
+      try {
+        privateKey = await getPrivateKey();
+      } catch (keyError) {
+        console.error("[Convex Token] Failed to get private key:", keyError);
+        return NextResponse.json({ error: "Key configuration error" }, { status: 500 });
+      }
 
       const convexToken = await new SignJWT({
         sub: tokenIdentifier,
@@ -50,8 +56,15 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ token: convexToken });
     } catch (error) {
-      console.error("[Convex Token] Invalid session token:", error);
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+      // Check if this is a JWT verification error or signing error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("JWS") || errorMessage.includes("signature") || errorMessage.includes("expired")) {
+        console.error("[Convex Token] Invalid session token:", error);
+        return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+      }
+      // Otherwise it's a signing error
+      console.error("[Convex Token] Token signing error:", error);
+      return NextResponse.json({ error: "Token signing failed" }, { status: 500 });
     }
   } catch (error) {
     console.error("[Convex Token] Error:", error);

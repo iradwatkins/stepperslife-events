@@ -35,12 +35,24 @@ function getKeyPair(): { privateKey: KeyObject; publicKey: KeyObject } {
 
   if (privateKeyPem && publicKeyPem) {
     // Use provided keys
-    const decodedPrivate = Buffer.from(privateKeyPem, "base64").toString("utf-8");
-    const decodedPublic = Buffer.from(publicKeyPem, "base64").toString("utf-8");
+    try {
+      const decodedPrivate = Buffer.from(privateKeyPem, "base64").toString("utf-8");
+      const decodedPublic = Buffer.from(publicKeyPem, "base64").toString("utf-8");
 
-    cachedPrivateKey = createPrivateKey(decodedPrivate);
-    cachedPublicKey = createPublicKey(decodedPublic);
-  } else {
+      cachedPrivateKey = createPrivateKey(decodedPrivate);
+      cachedPublicKey = createPublicKey(decodedPublic);
+    } catch (error) {
+      console.error(
+        "[JWKS] ERROR: Failed to parse JWT_PRIVATE_KEY/JWT_PUBLIC_KEY. Keys may be malformed or incorrectly base64-encoded.",
+        error instanceof Error ? error.message : error
+      );
+      // Fall through to generate ephemeral keys
+      console.warn("[JWKS] Falling back to ephemeral keys due to key parsing error.");
+    }
+  }
+
+  // Generate ephemeral keys if not cached (either not provided or parsing failed)
+  if (!cachedPrivateKey || !cachedPublicKey) {
     // SECURITY WARNING: No RSA keys configured
     const isProduction = process.env.NODE_ENV === "production";
 
