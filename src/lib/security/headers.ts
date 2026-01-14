@@ -27,6 +27,7 @@ const cspDirectives = {
     "https://www.google-analytics.com",
     "https://*.sentry.io",
     "https://static.cloudflareinsights.com", // Cloudflare Web Analytics
+    "https://cdn.jsdelivr.net", // browser-image-compression web worker
   ],
   "style-src": [
     "'self'",
