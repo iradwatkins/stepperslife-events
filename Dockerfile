@@ -11,6 +11,8 @@ RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json* ./
 
 # Install dependencies (including devDependencies for build)
+# HUSKY=0 prevents husky from running during npm ci (it's not needed in Docker)
+ENV HUSKY=0
 RUN npm ci
 
 # Copy all source files
