@@ -78,7 +78,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
       const compressionOptions = {
         maxSizeMB: 2,
         maxWidthOrHeight: 1920,
-        useWebWorker: true,
+        useWebWorker: false, // Disabled to avoid CSP issues with jsdelivr CDN
         fileType: file.type,
         initialQuality: 0.85,
       };
