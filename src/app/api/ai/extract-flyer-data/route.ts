@@ -63,17 +63,65 @@ You are an expert at extracting event information from party flyers, club flyers
 Your task: Extract ALL text from this flyer using a TWO-PHASE APPROACH and return it as clean, structured JSON.
 
 ═══════════════════════════════════════════════════════════════════
-🚨 CRITICAL: SAVE THE DATE FLYERS - DATE IS MANDATORY
+🚨 CRITICAL #1: SAVE THE DATE DETECTION
 ═══════════════════════════════════════════════════════════════════
 
-⚠️ **IF THIS IS A "SAVE THE DATE" FLYER:**
+⚠️ **SAVE THE DATE DETECTION IS MANDATORY:**
 
-The DATE is the ABSOLUTE MOST CRITICAL piece of information. You MUST find it.
+If the flyer contains ANY of these phrases, you MUST set eventType to "SAVE_THE_DATE":
+- "SAVE THE DATE" (in any case/style)
+- "SAVE-THE-DATE"
+- "STD" (as abbreviation)
+- "Details to follow"
+- "More info coming"
+- "Hotel link and more info to come"
 
-**How to identify Save the Date flyers:**
-- Contains text: "save the date", "save-the-date", "STD"
-- Contains: "details to follow", "coming soon", "more info coming"
-- Has event name and date but missing venue/time details
+**CRITICAL RULE:** When "SAVE THE DATE" text appears on the flyer:
+- eventType: MUST be "SAVE_THE_DATE" (not "TICKETED_EVENT")
+- containsSaveTheDateText: MUST be true
+- venueName, eventTime: Can be extracted if present (Save the Date can still have venue info)
+
+═══════════════════════════════════════════════════════════════════
+🚨 CRITICAL #2: EVENT NAME EXTRACTION FROM STYLIZED TEXT
+═══════════════════════════════════════════════════════════════════
+
+⚠️ **EVENT NAMES ARE OFTEN SPLIT ACROSS MULTIPLE LINES:**
+
+Many flyers display event names in large stylized text split across lines. You MUST:
+1. Combine words that form a single event name even if on separate lines
+2. Look for the LARGEST, most prominent text - this is usually the event name
+3. Include modifiers like "Annual", "1st", "2nd", etc.
+
+**EXAMPLES of split event names:**
+- "BOSS" on line 1 + "BRIM" on line 2 + "BASH" on line 3 = eventName: "Boss Brim Bash"
+- "HOSTILE" on line 1 + "TAKEOVER" on line 2 = eventName: "Hostile Takeover"
+- "POWER" on line 1 + "OF LOVE" on line 2 = eventName: "Power of Love"
+- "ANNUAL" above + "MIDWEST" + "AFFAIR" = eventName: "Annual Midwest Affair"
+
+**CRITICAL:** Always combine related stylized text into ONE event name. Do NOT extract just part of it.
+
+═══════════════════════════════════════════════════════════════════
+🚨 CRITICAL #3: CITY AND STATE EXTRACTION
+═══════════════════════════════════════════════════════════════════
+
+⚠️ **PARSE CITY/STATE FROM ALL COMMON FORMATS:**
+
+1. "CITY, STATE" → city: "City", state: "ST" (e.g., "Toledo, Ohio" → city: "Toledo", state: "OH")
+2. "CITY STATE" (no comma) → city: "City", state: "ST" (e.g., "ATLANTA GA" → city: "Atlanta", state: "GA")
+3. "CITY, ST ZIP" → city: "City", state: "ST" (e.g., "Chicago, IL 60637" → city: "Chicago", state: "IL")
+4. From full address: "123 Street, City, ST" → Extract city and state
+
+**STATE ABBREVIATIONS:** Always convert full state names to 2-letter codes:
+- "Georgia" or "GA" → "GA"
+- "Ohio" → "OH"
+- "Illinois" or "IL" → "IL"
+- "Florida" → "FL"
+
+**CRITICAL:** Even if the address shows "NE ATLANTA GA" or similar, extract city: "Atlanta", state: "GA"
+
+═══════════════════════════════════════════════════════════════════
+📋 SAVE THE DATE FLYER RULES
+═══════════════════════════════════════════════════════════════════
 
 **FOR SAVE THE DATE FLYERS - DATE EXTRACTION RULES:**
 
@@ -87,9 +135,9 @@ The DATE is the ABSOLUTE MOST CRITICAL piece of information. You MUST find it.
    - Description field: MUST include "Save the Date" and the DATE
    - eventName: Required
    - **eventDate: ABSOLUTELY REQUIRED - THIS IS THE MOST IMPORTANT FIELD**
-   - venueName: Can be null (details to follow)
-   - eventTime: Can be null (details to follow)
-   - city/state: Extract if shown, null if not
+   - venueName: Extract if shown (can have venue even for Save the Date)
+   - eventTime: Extract if shown (can have time even for Save the Date)
+   - city/state: Extract if shown
    - containsSaveTheDateText: Must be true
    - eventType: Must be "SAVE_THE_DATE"
 
