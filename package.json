@@ -10,7 +10,7 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "prepare": "husky",
+    "prepare": "node -e \"if (process.env.CI || process.env.DOCKER) process.exit(0)\" && husky || true",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -100,6 +100,7 @@
     "stripe": "^20.1.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4",
+    "typescript": "^5.9.3",
     "uuid": "^13.0.0",
     "zod": "^4.3.5"
   },
@@ -122,7 +123,6 @@
     "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "typescript": "5.9.3",
     "vitest": "^4.0.16"
   }
 }

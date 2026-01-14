@@ -11,8 +11,9 @@ RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json* ./
 
 # Install dependencies (including devDependencies for build)
-# Remove husky prepare script since git hooks aren't needed in Docker
-RUN npm pkg delete scripts.prepare && npm ci
+# CI=true skips husky in the prepare script (see package.json)
+ENV CI=true
+RUN npm ci
 
 # Copy all source files
 COPY . .
