@@ -7,8 +7,30 @@ import { jwtVerify } from "jose";
 import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
 import { Id } from "@/convex/_generated/dataModel";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const CONVEX_BACKEND_URL = process.env.NEXT_PUBLIC_CONVEX_URL || "https://convex.toolboxhosting.com";
+const convex = new ConvexHttpClient(CONVEX_BACKEND_URL);
 const JWT_SECRET = getJwtSecretEncoded();
+
+/**
+ * Resolve relative Convex URLs to absolute URLs.
+ * Self-hosted Convex returns relative URLs like /api/storage/upload?token=...
+ * which need to be converted to absolute URLs for fetch() to work.
+ */
+function resolveConvexUrl(url: string): string {
+  if (!url) return url;
+
+  // Already absolute URL
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  // Relative URL - prepend Convex backend
+  if (url.startsWith("/")) {
+    return `${CONVEX_BACKEND_URL}${url}`;
+  }
+
+  return url;
+}
 
 // Calculate file hash for duplicate detection
 async function calculateFileHash(buffer: Buffer): Promise<string> {
@@ -65,8 +87,9 @@ export async function POST(request: NextRequest) {
       })
       .toBuffer();
 
-    // Get upload URL from Convex
-    const uploadUrl = await convex.mutation(api.upload.generateUploadUrl);
+    // Get upload URL from Convex and resolve to absolute URL
+    const rawUploadUrl = await convex.mutation(api.upload.generateUploadUrl);
+    const uploadUrl = resolveConvexUrl(rawUploadUrl);
 
     // Upload to Convex storage
     const uploadResponse = await fetch(uploadUrl, {
