@@ -150,7 +150,7 @@ export function ExtractedDataReview({
                 />
               ) : extractedData.imageStorageId ? (
                 <img
-                  src={`/api/storage/${extractedData.imageStorageId}`}
+                  src={`https://convex.toolboxhosting.com/api/storage/${extractedData.imageStorageId}`}
                   alt="Event flyer"
                   className="w-full h-full object-cover"
                 />

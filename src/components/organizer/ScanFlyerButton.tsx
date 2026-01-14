@@ -35,6 +35,7 @@ export function ScanFlyerButton({ onDataExtracted, onError }: ScanFlyerButtonPro
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.files.mutations.generateUploadUrl);
+  const getImageUrl = useMutation(api.upload.getImageUrl);
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -80,6 +81,12 @@ export function ScanFlyerButton({ onDataExtracted, onError }: ScanFlyerButtonPro
 
       const { storageId } = await uploadResult.json();
 
+      // Get the full URL for the uploaded image from Convex
+      const imageUrl = await getImageUrl({ storageId });
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL from storage");
+      }
+
       setScanProgress("Scanning with AI...");
 
       // Call the OCR API
@@ -88,7 +95,7 @@ export function ScanFlyerButton({ onDataExtracted, onError }: ScanFlyerButtonPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storageId: storageId,
-          filepath: `/api/storage/${storageId}`
+          filepath: imageUrl,
         }),
       });
 
@@ -138,7 +145,7 @@ export function ScanFlyerButton({ onDataExtracted, onError }: ScanFlyerButtonPro
         fileInputRef.current.value = "";
       }
     }
-  }, [generateUploadUrl, onDataExtracted, onError]);
+  }, [generateUploadUrl, getImageUrl, onDataExtracted, onError]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

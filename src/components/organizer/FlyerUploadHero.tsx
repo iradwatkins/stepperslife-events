@@ -50,6 +50,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const generateUploadUrl = useMutation(api.files.mutations.generateUploadUrl);
+  const getImageUrl = useMutation(api.upload.getImageUrl);
 
   const processFlyer = useCallback(async (file: File) => {
     // Validate file type
@@ -99,6 +100,12 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
 
       const { storageId } = await uploadResult.json();
 
+      // Get the full URL for the uploaded image from Convex
+      const imageUrl = await getImageUrl({ storageId });
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL from storage");
+      }
+
       // Phase 3: Extract with AI
       setPhase("extracting");
       const extractResponse = await fetch("/api/ai/extract-flyer-data", {
@@ -106,7 +113,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storageId: storageId,
-          filepath: `/api/storage/${storageId}`,
+          filepath: imageUrl,
         }),
       });
 
@@ -154,7 +161,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
       setErrorMessage(errorMessage);
       onError?.(errorMessage);
     }
-  }, [generateUploadUrl, onDataExtracted, onError]);
+  }, [generateUploadUrl, getImageUrl, onDataExtracted, onError]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
