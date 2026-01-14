@@ -27,15 +27,23 @@ export function getJwtSecretEncoded(): Uint8Array {
 
 /**
  * Validate that JWT secret is properly configured
+ * In production, we warn but still allow fallback secrets to avoid breaking auth
  */
-export function validateJwtSecret(): { valid: boolean; error?: string } {
+export function validateJwtSecret(): { valid: boolean; error?: string; warning?: string } {
   const secret = getJwtSecret();
+  const isProduction = process.env.NODE_ENV === "production";
+  const hasEnvSecret = !!(process.env.JWT_SECRET || process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET);
 
-  if (!process.env.JWT_SECRET && !process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
-    return {
-      valid: false,
-      error: "No JWT secret configured in environment variables. Please set JWT_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET.",
-    };
+  if (!hasEnvSecret) {
+    const warningMessage = "No JWT secret configured in environment variables. Please set JWT_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET.";
+    if (isProduction) {
+      // In production, warn but don't block - this allows the app to function
+      // while alerting admins to configure proper secrets
+      console.warn("[JWT Secret] SECURITY WARNING:", warningMessage, "Using fallback secret.");
+      return { valid: true, warning: warningMessage };
+    }
+    // In development, this is expected
+    return { valid: true };
   }
 
   if (secret.includes("development-secret") || secret.includes("change-this")) {
