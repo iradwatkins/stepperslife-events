@@ -281,6 +281,120 @@ async function getImageData(filepath: string): Promise<{ base64: string; mimeTyp
 }
 
 /**
+ * State name to abbreviation mapping
+ */
+const STATE_ABBREVIATIONS: Record<string, string> = {
+  "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR",
+  "california": "CA", "colorado": "CO", "connecticut": "CT", "delaware": "DE",
+  "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
+  "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS",
+  "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+  "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS",
+  "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", "ohio": "OH", "oklahoma": "OK",
+  "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT",
+  "vermont": "VT", "virginia": "VA", "washington": "WA", "west virginia": "WV",
+  "wisconsin": "WI", "wyoming": "WY"
+};
+
+/**
+ * Post-process extracted data to fix common model errors
+ * This runs AFTER the model extraction to ensure data quality
+ */
+function postProcessExtractedData(data: Partial<ExtractedData>): Partial<ExtractedData> {
+  const processed = { ...data };
+  const descriptionLower = (processed.description || "").toLowerCase();
+
+  // 1. FIX: Save the Date detection from description text
+  const saveTheDatePatterns = [
+    "save the date",
+    "save-the-date",
+    "savethedate",
+    "details to follow",
+    "more info coming",
+    "more info to come",
+    "hotel link and more info to come"
+  ];
+
+  const hasSaveTheDate = saveTheDatePatterns.some(pattern =>
+    descriptionLower.includes(pattern)
+  );
+
+  if (hasSaveTheDate) {
+    processed.containsSaveTheDateText = true;
+    processed.eventType = "SAVE_THE_DATE";
+  }
+
+  // 2. FIX: Extract city/state from description or address if missing
+  if (!processed.city || !processed.state) {
+    // Common patterns: "ATLANTA GA", "Toledo, Ohio", "Chicago, IL 60637"
+    const locationPatterns = [
+      // "City, State" or "City, ST"
+      /\b([A-Z][a-zA-Z\s]+),\s*([A-Z]{2})\b/g,
+      // "City, Full State Name"
+      /\b([A-Z][a-zA-Z\s]+),\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\s+Hampshire|New\s+Jersey|New\s+Mexico|New\s+York|North\s+Carolina|North\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\s+Island|South\s+Carolina|South\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\s+Virginia|Wisconsin|Wyoming)\b/gi,
+      // "CITY ST" (no comma, like "ATLANTA GA")
+      /\b([A-Z]{3,})\s+([A-Z]{2})\b/g,
+    ];
+
+    const textToSearch = `${processed.description || ""} ${processed.address || ""}`;
+
+    for (const pattern of locationPatterns) {
+      const matches = [...textToSearch.matchAll(pattern)];
+      for (const match of matches) {
+        if (match[1] && match[2]) {
+          const potentialCity = match[1].trim();
+          let potentialState = match[2].trim();
+
+          // Skip if it looks like a street address component
+          if (/^(street|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct)$/i.test(potentialCity)) {
+            continue;
+          }
+
+          // Convert full state name to abbreviation
+          const stateLower = potentialState.toLowerCase();
+          if (STATE_ABBREVIATIONS[stateLower]) {
+            potentialState = STATE_ABBREVIATIONS[stateLower];
+          }
+
+          // Only update if not already set and looks valid
+          if (!processed.city && potentialCity.length >= 3) {
+            // Title case the city
+            processed.city = potentialCity.charAt(0).toUpperCase() +
+                           potentialCity.slice(1).toLowerCase();
+          }
+          if (!processed.state && potentialState.length === 2) {
+            processed.state = potentialState.toUpperCase();
+          }
+
+          if (processed.city && processed.state) break;
+        }
+      }
+      if (processed.city && processed.state) break;
+    }
+  }
+
+  // 3. FIX: Normalize state to 2-letter abbreviation
+  if (processed.state && processed.state.length > 2) {
+    const stateLower = processed.state.toLowerCase();
+    if (STATE_ABBREVIATIONS[stateLower]) {
+      processed.state = STATE_ABBREVIATIONS[stateLower];
+    }
+  }
+
+  // 4. FIX: Clean up event name - remove extra whitespace
+  if (processed.eventName) {
+    processed.eventName = processed.eventName
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return processed;
+}
+
+/**
  * Parse and validate the AI response
  */
 function parseExtractionResponse(
@@ -301,7 +415,10 @@ function parseExtractionResponse(
   cleanedText = cleanedText.trim();
 
   // Parse JSON
-  const extractedData = JSON.parse(cleanedText);
+  let extractedData = JSON.parse(cleanedText);
+
+  // Apply post-processing to fix common model errors
+  extractedData = postProcessExtractedData(extractedData);
 
   // Check if AI returned an error response
   if (extractedData.error === "EXTRACTION_FAILED") {
