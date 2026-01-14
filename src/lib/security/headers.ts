@@ -68,6 +68,11 @@ const cspDirectives = {
     "https://www.paypal.com",
     "https://www.sandbox.paypal.com",
   ],
+  // Allow blob workers for browser-image-compression library
+  "worker-src": [
+    "'self'",
+    "blob:",
+  ],
   "object-src": ["'none'"],
   "base-uri": ["'self'"],
   "form-action": ["'self'"],
