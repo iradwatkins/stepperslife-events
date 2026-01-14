@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { jwtVerify } from "jose";
 import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
 
 const JWT_SECRET = getJwtSecretEncoded();
 
-// Open WebUI Configuration (self-hosted, uses Ollama backend)
-// Model: qwen2.5vl:7b - Best open source OCR (~75% accuracy, GPT-4o level)
-// IMPORTANT: Read env vars at runtime via functions, not at build time
-function getOpenWebUIConfig() {
-  return {
-    baseUrl: process.env.OPENWEBUI_BASE_URL,
-    apiKey: process.env.OPENWEBUI_API_KEY,
-    model: process.env.OPENWEBUI_MODEL || "qwen2.5vl:7b",
-  };
+// Initialize Gemini AI - reads env var at runtime
+function getGeminiClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenerativeAI(apiKey);
 }
 
 // Type definitions for extracted data
@@ -60,7 +57,7 @@ interface ExtractionResult {
   warning?: string;
 }
 
-// Comprehensive extraction prompt - Two-Phase extraction strategy
+// Comprehensive extraction prompt
 const EXTRACTION_PROMPT = `EXPERT EVENT FLYER EXTRACTION PROMPT - TWO-PHASE EXTRACTION
 
 You are an expert at extracting event information from party flyers, club flyers, and promotional event materials.
@@ -97,54 +94,17 @@ Many flyers display event names in large stylized text split across lines. You M
 2. Look for the LARGEST, most prominent text - this is usually the event name
 3. Include modifiers like "Annual", "1st", "2nd", etc.
 
-**EXAMPLES of split event names:**
-- "BOSS" on line 1 + "BRIM" on line 2 + "BASH" on line 3 = eventName: "Boss Brim Bash"
-- "HOSTILE" on line 1 + "TAKEOVER" on line 2 = eventName: "Hostile Takeover"
-- "POWER" on line 1 + "OF LOVE" on line 2 = eventName: "Power of Love"
-- "ANNUAL" above + "MIDWEST" + "AFFAIR" = eventName: "Annual Midwest Affair"
-
-**CRITICAL:** Always combine related stylized text into ONE event name. Do NOT extract just part of it.
-
 ═══════════════════════════════════════════════════════════════════
 🚨 CRITICAL #3: CITY AND STATE EXTRACTION
 ═══════════════════════════════════════════════════════════════════
 
 ⚠️ **PARSE CITY/STATE FROM ALL COMMON FORMATS:**
 
-1. "CITY, STATE" → city: "City", state: "ST" (e.g., "Toledo, Ohio" → city: "Toledo", state: "OH")
-2. "CITY STATE" (no comma) → city: "City", state: "ST" (e.g., "ATLANTA GA" → city: "Atlanta", state: "GA")
-3. "CITY, ST ZIP" → city: "City", state: "ST" (e.g., "Chicago, IL 60637" → city: "Chicago", state: "IL")
-4. From full address: "123 Street, City, ST" → Extract city and state
+1. "CITY, STATE" → city: "City", state: "ST"
+2. "CITY STATE" (no comma) → city: "City", state: "ST"
+3. "CITY, ST ZIP" → city: "City", state: "ST"
 
-**STATE ABBREVIATIONS:** Always convert full state names to 2-letter codes:
-- "Georgia" or "GA" → "GA"
-- "Ohio" → "OH"
-- "Illinois" or "IL" → "IL"
-- "Florida" → "FL"
-
-**CRITICAL:** Even if the address shows "NE ATLANTA GA" or similar, extract city: "Atlanta", state: "GA"
-
-═══════════════════════════════════════════════════════════════════
-📋 SAVE THE DATE FLYER RULES
-═══════════════════════════════════════════════════════════════════
-
-**FOR SAVE THE DATE FLYERS - DATE EXTRACTION RULES:**
-
-1. **THE DATE IS MANDATORY - YOU MUST FIND IT**
-   - Search the ENTIRE flyer for date information
-   - Look EVERYWHERE: top, bottom, center, corners, sides, watermarks, background
-   - Check ALL text sizes: large headlines, small print, decorative text
-   - Look for ANY date format: "January 8-11", "Jan 8", "1/8/26", "January 2026"
-
-2. **For Save the Date flyers:**
-   - Description field: MUST include "Save the Date" and the DATE
-   - eventName: Required
-   - **eventDate: ABSOLUTELY REQUIRED - THIS IS THE MOST IMPORTANT FIELD**
-   - venueName: Extract if shown (can have venue even for Save the Date)
-   - eventTime: Extract if shown (can have time even for Save the Date)
-   - city/state: Extract if shown
-   - containsSaveTheDateText: Must be true
-   - eventType: Must be "SAVE_THE_DATE"
+**STATE ABBREVIATIONS:** Always convert full state names to 2-letter codes
 
 ═══════════════════════════════════════════════════════════════════
 🎯 TWO-PHASE EXTRACTION STRATEGY
@@ -156,27 +116,24 @@ This goes in the "description" field and is the foundation for Phase 2.
 
 Read the ENTIRE flyer carefully and capture:
 - Main event title/headline
-- All dates and times mentioned anywhere (including END time if shown)
+- All dates and times mentioned anywhere
 - Venue name and address details
 - ALL performer names, DJ names, special guests
-- **TICKET PRICING INFORMATION** (very important - include all ticket types, prices, and details)
+- TICKET PRICING INFORMATION
 - Contact information (phone, email, social media)
 - Age restrictions, dress codes, parking info
 - Sponsors, hosts, organizers
 - Fine print, disclaimers, legal text
-- Any other visible text (don't skip anything!)
 
 🚫 **CRITICAL EXCLUSION - DO NOT INCLUDE DESIGNER INFORMATION IN DESCRIPTION:**
-- **COMPLETELY EXCLUDE** any text about graphic design, flyer design, or designer credits
-- **DO NOT include** phrases like: "Design by", "Designed by", "Graphics by", "Flyer by"
+- COMPLETELY EXCLUDE any text about graphic design, flyer design, or designer credits
 
 **CRITICAL JSON FORMATTING:**
 - In the JSON output, use the escape sequence \\n (backslash-n) for line breaks
 - DO NOT use actual/literal newlines in the JSON string - this breaks JSON parsing
-- Example CORRECT: "description": "Paragraph 1\\n\\nParagraph 2\\n\\nParagraph 3"
 
 **PHASE 2: STRUCTURED FIELD EXTRACTION**
-After Phase 1 is complete, use the description text you extracted to fill out the structured fields below.
+After Phase 1 is complete, use the description text you extracted to fill out the structured fields.
 
 ═══════════════════════════════════════════════════════════════════
 🚨 CRITICAL MANDATORY FIELDS (CANNOT BE NULL)
@@ -269,7 +226,7 @@ async function getImageData(filepath: string): Promise<{ base64: string; mimeTyp
   // Build the full URL
   const imageUrl = filepath.startsWith("http")
     ? filepath
-    : `${process.env.NEXT_PUBLIC_APP_URL || "https://stepperslife.com"}${filepath}`;
+    : `${process.env.NEXT_PUBLIC_APP_URL || "https://events.stepperslife.com"}${filepath}`;
 
   const imageResponse = await fetch(imageUrl);
   if (!imageResponse.ok) {
@@ -306,13 +263,12 @@ const STATE_ABBREVIATIONS: Record<string, string> = {
 
 /**
  * Post-process extracted data to fix common model errors
- * This runs AFTER the model extraction to ensure data quality
  */
 function postProcessExtractedData(data: Partial<ExtractedData>): Partial<ExtractedData> {
   const processed = { ...data };
   const descriptionLower = (processed.description || "").toLowerCase();
 
-  // 1. FIX: Save the Date detection from description text
+  // Fix: Save the Date detection from description text
   const saveTheDatePatterns = [
     "save the date",
     "save-the-date",
@@ -332,56 +288,7 @@ function postProcessExtractedData(data: Partial<ExtractedData>): Partial<Extract
     processed.eventType = "SAVE_THE_DATE";
   }
 
-  // 2. FIX: Extract city/state from description or address if missing
-  if (!processed.city || !processed.state) {
-    // Common patterns: "ATLANTA GA", "Toledo, Ohio", "Chicago, IL 60637"
-    const locationPatterns = [
-      // "City, State" or "City, ST"
-      /\b([A-Z][a-zA-Z\s]+),\s*([A-Z]{2})\b/g,
-      // "City, Full State Name"
-      /\b([A-Z][a-zA-Z\s]+),\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\s+Hampshire|New\s+Jersey|New\s+Mexico|New\s+York|North\s+Carolina|North\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\s+Island|South\s+Carolina|South\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\s+Virginia|Wisconsin|Wyoming)\b/gi,
-      // "CITY ST" (no comma, like "ATLANTA GA")
-      /\b([A-Z]{3,})\s+([A-Z]{2})\b/g,
-    ];
-
-    const textToSearch = `${processed.description || ""} ${processed.address || ""}`;
-
-    for (const pattern of locationPatterns) {
-      const matches = [...textToSearch.matchAll(pattern)];
-      for (const match of matches) {
-        if (match[1] && match[2]) {
-          const potentialCity = match[1].trim();
-          let potentialState = match[2].trim();
-
-          // Skip if it looks like a street address component
-          if (/^(street|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct)$/i.test(potentialCity)) {
-            continue;
-          }
-
-          // Convert full state name to abbreviation
-          const stateLower = potentialState.toLowerCase();
-          if (STATE_ABBREVIATIONS[stateLower]) {
-            potentialState = STATE_ABBREVIATIONS[stateLower];
-          }
-
-          // Only update if not already set and looks valid
-          if (!processed.city && potentialCity.length >= 3) {
-            // Title case the city
-            processed.city = potentialCity.charAt(0).toUpperCase() +
-                           potentialCity.slice(1).toLowerCase();
-          }
-          if (!processed.state && potentialState.length === 2) {
-            processed.state = potentialState.toUpperCase();
-          }
-
-          if (processed.city && processed.state) break;
-        }
-      }
-      if (processed.city && processed.state) break;
-    }
-  }
-
-  // 3. FIX: Normalize state to 2-letter abbreviation
+  // Fix: Normalize state to 2-letter abbreviation
   if (processed.state && processed.state.length > 2) {
     const stateLower = processed.state.toLowerCase();
     if (STATE_ABBREVIATIONS[stateLower]) {
@@ -389,7 +296,7 @@ function postProcessExtractedData(data: Partial<ExtractedData>): Partial<Extract
     }
   }
 
-  // 4. FIX: Clean up event name - remove extra whitespace
+  // Fix: Clean up event name - remove extra whitespace
   if (processed.eventName) {
     processed.eventName = processed.eventName
       .replace(/\s+/g, " ")
@@ -479,62 +386,44 @@ function parseExtractionResponse(
 }
 
 /**
- * Extract flyer data using Open WebUI (self-hosted)
- * Uses OpenAI-compatible API with vision model (qwen2.5vl:7b)
+ * Extract flyer data using Google Gemini
  */
-async function extractWithOpenWebUI(
+async function extractWithGemini(
   base64Image: string,
   mimeType: string
 ): Promise<ExtractionResult> {
-  const config = getOpenWebUIConfig();
+  const genAI = getGeminiClient();
 
-  if (!config.baseUrl || !config.apiKey) {
-    throw new Error("Open WebUI not configured - OPENWEBUI_BASE_URL and OPENWEBUI_API_KEY required");
+  if (!genAI) {
+    throw new Error("Gemini API not configured - GEMINI_API_KEY required");
   }
 
-  const response = await fetch(`${config.baseUrl}/api/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`,
+  // Use Gemini 1.5 Flash for fast, accurate vision extraction
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const result = await model.generateContent([
+    EXTRACTION_PROMPT,
+    {
+      inlineData: {
+        data: base64Image,
+        mimeType: mimeType,
+      },
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: EXTRACTION_PROMPT },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${base64Image}` },
-            },
-          ],
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 4096,
-    }),
-  });
+  ]);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Open WebUI API error: ${response.status} ${errorText}`);
-  }
-
-  const data = await response.json();
-  const extractedText = data.choices?.[0]?.message?.content;
+  const response = await result.response;
+  const extractedText = response.text();
 
   if (!extractedText) {
-    throw new Error("No response from Open WebUI");
+    throw new Error("No response from Gemini");
   }
 
-  return parseExtractionResponse(extractedText, config.model);
+  return parseExtractionResponse(extractedText, "gemini-1.5-flash");
 }
 
 /**
  * Main POST handler
- * Uses Open WebUI with qwen2.5vl:7b (self-hosted, GPT-4o level OCR)
+ * Uses Google Gemini for AI-powered flyer extraction
  */
 export async function POST(request: NextRequest) {
   try {
@@ -568,12 +457,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract using Open WebUI
+    // Extract using Gemini
     let result: ExtractionResult;
     try {
-      result = await extractWithOpenWebUI(imageData.base64, imageData.mimeType);
+      result = await extractWithGemini(imageData.base64, imageData.mimeType);
     } catch (error) {
-      console.error("[AI Extraction] Open WebUI failed:", error);
+      console.error("[AI Extraction] Gemini failed:", error);
+
+      // Check for specific Gemini API errors
+      if (error instanceof Error) {
+        if (error.message.includes("API key")) {
+          return NextResponse.json(
+            {
+              error: "Gemini API key invalid or expired",
+              details: error.message,
+            },
+            { status: 401 }
+          );
+        }
+        if (error.message.includes("quota") || error.message.includes("rate")) {
+          return NextResponse.json(
+            {
+              error: "Gemini API rate limit exceeded",
+              details: error.message,
+            },
+            { status: 429 }
+          );
+        }
+      }
+
       throw new Error(
         `AI extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -616,37 +528,32 @@ export async function POST(request: NextRequest) {
  * GET handler to check AI provider status
  */
 export async function GET() {
-  const config = getOpenWebUIConfig();
-  const openwebuiConfigured = !!(config.baseUrl && config.apiKey);
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiConfigured = !!geminiApiKey;
 
-  // Check Open WebUI availability
-  let openwebuiAvailable = false;
-  if (openwebuiConfigured) {
+  // Check Gemini availability by attempting to list models
+  let geminiAvailable = false;
+  if (geminiConfigured) {
     try {
-      const response = await fetch(`${config.baseUrl}/api/models`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${config.apiKey}`,
-        },
-        signal: AbortSignal.timeout(5000),
-      });
-      openwebuiAvailable = response.ok;
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      // Simple check - try to get the model
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      geminiAvailable = !!model;
     } catch {
-      openwebuiAvailable = false;
+      geminiAvailable = false;
     }
   }
 
   return NextResponse.json({
     providers: {
-      openwebui: {
-        available: openwebuiAvailable,
-        configured: openwebuiConfigured,
-        url: config.baseUrl || "not configured",
-        model: config.model,
-        description: "Self-hosted Open WebUI with Ollama backend",
+      gemini: {
+        available: geminiAvailable,
+        configured: geminiConfigured,
+        model: "gemini-1.5-flash",
+        description: "Google Gemini AI - Fast and accurate vision model",
       },
     },
-    strategy: "Open WebUI (self-hosted) with qwen2.5vl:7b",
-    recommendation: openwebuiAvailable ? "openwebui" : "none",
+    strategy: "Google Gemini (gemini-1.5-flash)",
+    recommendation: geminiAvailable ? "gemini" : "none",
   });
 }
