@@ -26,6 +26,7 @@ const cspDirectives = {
     "https://www.googletagmanager.com",
     "https://www.google-analytics.com",
     "https://*.sentry.io",
+    "https://static.cloudflareinsights.com", // Cloudflare Web Analytics
   ],
   "style-src": [
     "'self'",
@@ -56,7 +57,9 @@ const cspDirectives = {
     "https://www.google-analytics.com",
     "https://*.sentry.io",
     "https://postal.toolboxhosting.com",
-    process.env.NEXT_PUBLIC_CONVEX_URL || "",
+    // Self-hosted Convex - need both https and wss protocols
+    "https://convex.toolboxhosting.com",
+    "wss://convex.toolboxhosting.com",
   ].filter(Boolean),
   "frame-src": [
     "'self'",
