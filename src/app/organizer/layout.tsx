@@ -44,22 +44,12 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
             staffRoles: [],
           };
 
-          // Check if user is an instructor - redirect them to instructor dashboard
-          if (apiUser.role === "instructor") {
-            router.push("/instructor/dashboard");
-            return;
-          }
-
-          // Check if user has organizer or admin role
-          if (apiUser.role !== "organizer" && apiUser.role !== "admin") {
-            // Redirect to user's appropriate dashboard based on role
-            if (apiUser.role === "instructor") {
-              router.push("/instructor/dashboard");
-            } else if (apiUser.role === "restaurateur") {
-              router.push("/restaurateur/dashboard");
-            } else {
-              router.push("/unauthorized");
-            }
+          // Multi-role support: Allow users with any authenticated role to access organizer features
+          // The FAQ says "You can be an event organizer, instructor, vendor, and more all at once"
+          // Only block if user has no valid role at all
+          const allowedRoles = ["organizer", "admin", "instructor", "user", "restaurateur", "vendor"];
+          if (!allowedRoles.includes(apiUser.role)) {
+            router.push("/unauthorized");
             return;
           }
 

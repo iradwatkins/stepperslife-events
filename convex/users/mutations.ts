@@ -861,12 +861,14 @@ export const upgradeToOrganizer = mutation({
       return { success: true, role: "admin", message: "Already an admin" };
     }
 
-    // Don't override other specialized roles (they can still create events)
-    // but organizer is considered a "promotion" from user role
-    if (user.role !== "user") {
-      return { success: true, role: user.role, message: "Already has a specialized role" };
+    // Already an organizer - just return success
+    if (user.role === "organizer") {
+      return { success: true, role: "organizer", message: "Already an organizer" };
     }
 
+    // Multi-role support: Allow users with other roles (instructor, user, etc.) to become organizers
+    // The organizer layout now allows access regardless of original role
+    // Note: We upgrade ALL users to organizer role since creating events requires it
     await ctx.db.patch(user._id, {
       role: "organizer",
       updatedAt: Date.now(),

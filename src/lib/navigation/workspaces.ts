@@ -56,7 +56,7 @@ export const WORKSPACES: Workspace[] = [
     bgColor: "bg-purple-500",
     textColor: "text-purple-500",
     borderColor: "border-purple-500",
-    roles: ["organizer", "STAFF", "TEAM_MEMBERS", "ASSOCIATES"],
+    roles: ["organizer", "instructor", "STAFF", "TEAM_MEMBERS", "ASSOCIATES"],
     defaultPath: "/organizer/dashboard",
     description: "Manage events, tickets & team",
   },
