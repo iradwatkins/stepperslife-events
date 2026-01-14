@@ -384,7 +384,7 @@ export function generateNoActivityDigest(data: NoActivityDigestData): { html: st
     : `
       <div style="background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 24px; text-align: center;">
         <div style="font-size: 14px; color: #666666; margin-bottom: 16px;">No upcoming classes scheduled</div>
-        <a href="https://stepperslife.com/organizer/classes/create" style="display: inline-block; padding: 10px 20px; background: #1a1a1a; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: 500;">
+        <a href="https://events.stepperslife.com/instructor/classes/create" style="display: inline-block; padding: 10px 20px; background: #1a1a1a; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: 500;">
           Create a Class
         </a>
       </div>

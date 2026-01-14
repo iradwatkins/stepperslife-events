@@ -46,7 +46,7 @@ export default function ReviewAnalyticsPage() {
           <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
           <h2 className="text-xl font-bold text-foreground mb-2">No Analytics Available</h2>
           <p className="text-muted-foreground mb-4">Create some classes to start collecting reviews.</p>
-          <Link href="/organizer/classes/create">
+          <Link href="/instructor/classes/create">
             <Button>Create a Class</Button>
           </Link>
         </div>

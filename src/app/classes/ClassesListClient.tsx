@@ -466,7 +466,7 @@ export default function ClassesListClient({
                   asChild
                   className="border-2 border-white/50 !text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 font-semibold px-8 py-6 text-lg rounded-full"
                 >
-                  <Link href="/organizer/classes/create">
+                  <Link href="/instructor/classes/create">
                     <GraduationCap className="mr-2 h-5 w-5 text-white" />
                     Create a Class
                   </Link>

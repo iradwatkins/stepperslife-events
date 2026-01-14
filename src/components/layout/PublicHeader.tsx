@@ -96,7 +96,7 @@ export function PublicHeader({
     }
     if (pathname?.startsWith("/classes")) {
       return {
-        href: "/organizer/classes/create",
+        href: "/instructor/classes/create",
         label: "Create Class",
         shortLabel: "Class",
         icon: BookOpen
@@ -297,7 +297,7 @@ export function PublicHeader({
                               My Events
                             </Link>
                             <Link
-                              href="/organizer/classes"
+                              href="/instructor/classes"
                               onClick={() => setIsProfileOpen(false)}
                               data-testid="menu-my-classes"
                               className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
@@ -522,7 +522,7 @@ export function PublicHeader({
                         My Events
                       </Link>
                       <Link
-                        href="/organizer/classes"
+                        href="/instructor/classes"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-accent rounded-lg transition-colors"
                       >

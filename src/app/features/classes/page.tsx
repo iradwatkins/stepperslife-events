@@ -178,7 +178,7 @@ export default function ClassesFeaturesPage() {
               className="flex flex-wrap justify-center gap-4"
             >
               <Link
-                href="/organizer/classes/create"
+                href="/instructor/classes/create"
                 className="group px-8 py-4 bg-white text-warning font-bold rounded-xl hover:bg-white/90 transition-all transform hover:scale-105 shadow-2xl flex items-center gap-2"
               >
                 Create Your Class
@@ -670,7 +670,7 @@ export default function ClassesFeaturesPage() {
             </div>
 
             <Link
-              href="/organizer/classes/create"
+              href="/instructor/classes/create"
               className="inline-flex items-center gap-2 px-8 py-4 bg-warning text-white font-bold rounded-xl hover:bg-warning/90 transition-all"
             >
               Start Teaching Today
@@ -729,7 +729,7 @@ export default function ClassesFeaturesPage() {
               whileTap={{ scale: 0.95 }}
             >
               <Link
-                href="/organizer/classes/create"
+                href="/instructor/classes/create"
                 className="inline-flex items-center gap-2 px-10 py-5 bg-white text-warning font-bold text-xl rounded-xl hover:bg-white/90 transition-all shadow-2xl"
               >
                 Create Your First Class

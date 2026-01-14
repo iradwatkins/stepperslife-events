@@ -296,7 +296,7 @@ export function generateInstructorCancellationNotification(data: InstructorCance
         </table>
       </div>
 
-      ${BWTemplate.primaryButton('View Class Roster', 'https://stepperslife.com/organizer/classes')}
+      ${BWTemplate.primaryButton('View Class Roster', 'https://events.stepperslife.com/instructor/classes')}
 
       <div class="divider"></div>
 

@@ -51,7 +51,7 @@ const heroSlides = [
     title: "Turn Your Passion Into Steady Income",
     subtitle: "Get paid automatically while you focus on what you love—teaching",
     cta: "Start Teaching",
-    href: "/organizer/classes/create",
+    href: "/instructor/classes/create",
     accent: "warning",
   },
   {
@@ -524,7 +524,7 @@ export default function FeaturesPage() {
 
                 <div className="flex flex-wrap gap-4">
                   <Link
-                    href="/organizer/classes/create"
+                    href="/instructor/classes/create"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-warning text-white rounded-lg hover:bg-warning/90 transition-colors font-semibold"
                   >
                     Start Teaching

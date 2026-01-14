@@ -10,7 +10,7 @@ export function ClassesSubNav() {
   const navItems = [
     { href: "/classes", label: "Browse Classes", icon: BookOpen },
     { href: "/instructors", label: "Find Instructors", icon: GraduationCap },
-    { href: "/organizer/classes/create", label: "Create Class", icon: Plus },
+    { href: "/instructor/classes/create", label: "Create Class", icon: Plus },
     { href: "/pricing", label: "Pricing", icon: DollarSign },
   ];
 

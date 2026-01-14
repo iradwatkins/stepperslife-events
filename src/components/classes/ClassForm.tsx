@@ -467,7 +467,7 @@ export default function ClassForm({ mode, classId }: ClassFormProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
-                href="/organizer/classes"
+                href="/instructor/classes"
                 className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -961,7 +961,7 @@ export default function ClassForm({ mode, classId }: ClassFormProps) {
           {/* Submit Button */}
           <div className="flex justify-end gap-4 pt-4">
             <Link
-              href="/organizer/classes"
+              href="/instructor/classes"
               className="px-6 py-3 border border-border text-foreground rounded-lg hover:bg-muted transition-colors"
               data-testid="class-cancel-btn"
             >

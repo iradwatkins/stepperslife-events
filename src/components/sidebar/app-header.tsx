@@ -350,7 +350,7 @@ export function AppHeader() {
                         <Calendar className="mr-2 h-4 w-4" />
                         <span>My Events</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push("/organizer/classes")}>
+                      <DropdownMenuItem onClick={() => router.push("/instructor/classes")}>
                         <BookOpen className="mr-2 h-4 w-4" />
                         <span>My Classes</span>
                       </DropdownMenuItem>
