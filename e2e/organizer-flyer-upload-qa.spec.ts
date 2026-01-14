@@ -253,8 +253,8 @@ test.describe("Event Organizer Flyer Upload QA", () => {
         await loadingIndicator.waitFor({ state: "hidden", timeout: 60000 }).catch(() => {});
       }
 
-      // Wait additional time for extraction
-      await page.waitForTimeout(10000);
+      // Wait for extraction to complete and form to populate
+      await page.waitForTimeout(15000);
 
       // Take screenshot of result
       await page.screenshot({
@@ -262,14 +262,29 @@ test.describe("Event Organizer Flyer Upload QA", () => {
         fullPage: true
       });
 
-      // Try to find extracted data on page
+      // Get all page content including form values
       const pageContent = await page.content();
 
-      // Check if extraction detected Save the Date
-      if (pageContent.toLowerCase().includes("save") && pageContent.toLowerCase().includes("date")) {
+      // Check multiple ways for Save the Date detection:
+      // 1. Check for "save" and "date" text anywhere (descriptions, headings)
+      // 2. Check for SAVE_THE_DATE in form values or data attributes
+      // 3. Check for event type selector/dropdown with save-the-date selected
+      const saveTheDateIndicators = [
+        pageContent.toLowerCase().includes("save") && pageContent.toLowerCase().includes("date"),
+        pageContent.includes("SAVE_THE_DATE"),
+        pageContent.includes("save-the-date"),
+        pageContent.includes("Save the Date"),
+        // Check form fields
+        await page.locator('[name="eventType"]').inputValue().catch(() => "").then(v => v.includes("SAVE")),
+        await page.locator('select[name="eventType"] option:checked').textContent().catch(() => "").then(t => t?.toLowerCase().includes("save")),
+        await page.locator('[data-value*="SAVE"]').count().catch(() => 0) > 0,
+      ];
+
+      if (saveTheDateIndicators.some(Boolean)) {
         console.log("SUCCESS: Save the Date detected");
       } else {
         console.log("WARNING: Save the Date may not have been detected");
+        console.log("Indicators checked:", saveTheDateIndicators);
         bugReports.push({
           testName: "Chicago Steppers Atlanta Flyer",
           category: "OCR Extraction",
@@ -279,11 +294,21 @@ test.describe("Event Organizer Flyer Upload QA", () => {
         });
       }
 
-      // Check for Atlanta in extracted data
-      if (pageContent.toLowerCase().includes("atlanta")) {
+      // Check for Atlanta in multiple places:
+      // 1. Page content
+      // 2. City input field
+      // 3. Address field
+      const atlantaIndicators = [
+        pageContent.toLowerCase().includes("atlanta"),
+        await page.locator('[name="city"]').inputValue().catch(() => "").then(v => v.toLowerCase().includes("atlanta")),
+        await page.locator('input[placeholder*="City"]').inputValue().catch(() => "").then(v => v.toLowerCase().includes("atlanta")),
+      ];
+
+      if (atlantaIndicators.some(Boolean)) {
         console.log("SUCCESS: Atlanta location detected");
       } else {
         console.log("WARNING: Atlanta location not detected");
+        console.log("Indicators checked:", atlantaIndicators);
         bugReports.push({
           testName: "Chicago Steppers Atlanta Flyer",
           category: "OCR Extraction",

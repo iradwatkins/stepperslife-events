@@ -6,9 +6,14 @@ const JWT_SECRET = getJwtSecretEncoded();
 
 // Open WebUI Configuration (self-hosted, uses Ollama backend)
 // Model: qwen2.5vl:7b - Best open source OCR (~75% accuracy, GPT-4o level)
-const OPENWEBUI_BASE_URL = process.env.OPENWEBUI_BASE_URL;
-const OPENWEBUI_API_KEY = process.env.OPENWEBUI_API_KEY;
-const OPENWEBUI_MODEL = process.env.OPENWEBUI_MODEL || "qwen2.5vl:7b";
+// IMPORTANT: Read env vars at runtime via functions, not at build time
+function getOpenWebUIConfig() {
+  return {
+    baseUrl: process.env.OPENWEBUI_BASE_URL,
+    apiKey: process.env.OPENWEBUI_API_KEY,
+    model: process.env.OPENWEBUI_MODEL || "qwen2.5vl:7b",
+  };
+}
 
 // Type definitions for extracted data
 interface ExtractedData {
@@ -481,18 +486,20 @@ async function extractWithOpenWebUI(
   base64Image: string,
   mimeType: string
 ): Promise<ExtractionResult> {
-  if (!OPENWEBUI_BASE_URL || !OPENWEBUI_API_KEY) {
+  const config = getOpenWebUIConfig();
+
+  if (!config.baseUrl || !config.apiKey) {
     throw new Error("Open WebUI not configured - OPENWEBUI_BASE_URL and OPENWEBUI_API_KEY required");
   }
 
-  const response = await fetch(`${OPENWEBUI_BASE_URL}/api/chat/completions`, {
+  const response = await fetch(`${config.baseUrl}/api/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENWEBUI_API_KEY}`,
+      "Authorization": `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: OPENWEBUI_MODEL,
+      model: config.model,
       messages: [
         {
           role: "user",
@@ -522,7 +529,7 @@ async function extractWithOpenWebUI(
     throw new Error("No response from Open WebUI");
   }
 
-  return parseExtractionResponse(extractedText, OPENWEBUI_MODEL);
+  return parseExtractionResponse(extractedText, config.model);
 }
 
 /**
@@ -609,16 +616,17 @@ export async function POST(request: NextRequest) {
  * GET handler to check AI provider status
  */
 export async function GET() {
-  const openwebuiConfigured = !!(OPENWEBUI_BASE_URL && OPENWEBUI_API_KEY);
+  const config = getOpenWebUIConfig();
+  const openwebuiConfigured = !!(config.baseUrl && config.apiKey);
 
   // Check Open WebUI availability
   let openwebuiAvailable = false;
   if (openwebuiConfigured) {
     try {
-      const response = await fetch(`${OPENWEBUI_BASE_URL}/api/models`, {
+      const response = await fetch(`${config.baseUrl}/api/models`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${OPENWEBUI_API_KEY}`,
+          "Authorization": `Bearer ${config.apiKey}`,
         },
         signal: AbortSignal.timeout(5000),
       });
@@ -633,8 +641,8 @@ export async function GET() {
       openwebui: {
         available: openwebuiAvailable,
         configured: openwebuiConfigured,
-        url: OPENWEBUI_BASE_URL || "not configured",
-        model: OPENWEBUI_MODEL,
+        url: config.baseUrl || "not configured",
+        model: config.model,
         description: "Self-hosted Open WebUI with Ollama backend",
       },
     },
