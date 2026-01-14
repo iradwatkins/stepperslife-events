@@ -45,6 +45,8 @@
     "node_modules",
     "docs-archive",
     "scripts/tests",
-    "tests"
+    "tests",
+    "vitest.config.ts",
+    "e2e"
   ]
 }
