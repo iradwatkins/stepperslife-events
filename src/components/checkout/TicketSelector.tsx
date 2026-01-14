@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Ticket Selector Component
  *
@@ -9,7 +11,7 @@
  * - Quantity picker
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ticket, Package, Zap, TrendingDown, Minus, Plus } from "lucide-react";
 import { TierCountdown, TierAvailabilityBadge } from "@/components/events/TierCountdown";
 import { format } from "date-fns";
@@ -75,7 +77,14 @@ export function TicketSelector({
   onQuantityChange,
   maxQuantity = 10,
 }: TicketSelectorProps) {
-  const now = Date.now();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Filter available tiers
   const availableTiers = tiers.filter((tier) => {

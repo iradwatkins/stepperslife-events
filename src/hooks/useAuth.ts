@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -25,11 +25,7 @@ export function useAuth() {
     isAuthenticated: false,
   });
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/me", {
         credentials: "include", // Include cookies in request
@@ -62,7 +58,12 @@ export function useAuth() {
         isAuthenticated: false,
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: async auth check on mount
+    checkAuth();
+  }, [checkAuth]);
 
   const logout = async () => {
     try {

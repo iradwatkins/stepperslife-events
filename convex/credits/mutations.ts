@@ -152,7 +152,7 @@ export const confirmCreditPurchase = mutation({
   },
   handler: async (ctx, args) => {
     // Find existing transaction (if created during payment intent creation)
-    let transaction = await ctx.db
+    const transaction = await ctx.db
       .query("creditTransactions")
       .filter((q) => q.eq(q.field("stripePaymentIntentId"), args.stripePaymentIntentId))
       .first();

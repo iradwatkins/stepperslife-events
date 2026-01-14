@@ -50,11 +50,9 @@ export const getOrganizerSettlement = query({
 
         // Calculate totals
         const totalSales = sales.length;
-        const totalTickets = sales.reduce((sum, sale) => sum + sale.ticketCount, 0);
-        const totalCommission = sales.reduce((sum, sale) => sum + sale.commissionAmount, 0);
+        const cashSales = sales.filter((s) => s.paymentMethod === "CASH");
 
         // Cash collected from cash sales only
-        const cashSales = sales.filter((s) => s.paymentMethod === "CASH");
         const totalCashCollected = staff.cashCollected || 0;
 
         // Net settlement: commission - cash collected

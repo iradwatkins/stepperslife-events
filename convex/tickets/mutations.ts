@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
+import { Id, Doc } from "../_generated/dataModel";
 import { api } from "../_generated/api";
 import { requireEventOwnership } from "../lib/auth";
 
@@ -32,9 +32,6 @@ export const createTicketTier = mutation({
     tableCapacity: v.optional(v.number()), // Seats per table
   },
   handler: async (ctx, args) => {
-    // BYPASS ctx.auth - use same workaround as createEvent
-    const identity = await ctx.auth.getUserIdentity();
-
     // Verify event exists
     const event = await ctx.db.get(args.eventId);
     if (!event) {
@@ -67,7 +64,7 @@ export const createTicketTier = mutation({
         .collect();
 
       // Simple capacity calculation
-      const getTierCapacity = (tier: any) => {
+      const getTierCapacity = (tier: Doc<"ticketTiers">) => {
         const qty = tier.quantity || 0;
         if (tier.isTablePackage && tier.tableCapacity) {
           return qty * tier.tableCapacity; // Tables × seats per table
@@ -134,7 +131,7 @@ export const deleteTicketTier = mutation({
     if (!tier) throw new Error("Ticket tier not found");
 
     // Verify ownership (throws if not authorized)
-    const { user, event } = await requireEventOwnership(ctx, tier.eventId);
+    const { event } = await requireEventOwnership(ctx, tier.eventId);
 
     // Check if event has started
     const now = Date.now();
@@ -198,9 +195,6 @@ export const updateTicketTier = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    // BYPASS ctx.auth - use same workaround as createTicketTier
-    const identity = await ctx.auth.getUserIdentity();
-
     const tier = await ctx.db.get(args.tierId);
     if (!tier) throw new Error("Ticket tier not found");
 
@@ -208,17 +202,6 @@ export const updateTicketTier = mutation({
     const event = await ctx.db.get(tier.eventId);
     if (!event) throw new Error("Event not found");
     if (!event.organizerId) throw new Error("Event has no organizer");
-
-    // Get the event organizer as the user (bypass auth check)
-    const user = await ctx.db.get(event.organizerId);
-
-    if (!user) {
-      throw new Error("Event organizer not found");
-    }
-
-    // Allow the event organizer to update tickets for their event
-    // (we're trusting that the event.organizerId is valid)
-    const organizerId: Id<"users"> = user._id;
 
     // CHECK IF EVENT HAS STARTED - Can edit tickets until event begins
     const now = Date.now();
@@ -257,7 +240,7 @@ export const updateTicketTier = mutation({
           .collect();
 
         // Simple capacity calculation
-        const getTierCapacity = (t: any) => {
+        const getTierCapacity = (t: Doc<"ticketTiers">) => {
           const qty = t.quantity || 0;
           if (t.isTablePackage && t.tableCapacity) {
             return qty * t.tableCapacity; // Tables × seats per table
@@ -1367,7 +1350,7 @@ export const updateTicket = mutation({
     }
 
     // Update ticket details
-    const updates: any = {
+    const updates: Partial<Doc<"tickets">> = {
       updatedAt: Date.now(),
     };
 
@@ -1598,9 +1581,7 @@ export const duplicateTicketTier = mutation({
     }
 
     // Verify ownership (throws if not authorized)
-    const ownershipCheck = await requireEventOwnership(ctx, originalTier.eventId);
-    const event = ownershipCheck.event;
-    const user = ownershipCheck.user;
+    await requireEventOwnership(ctx, originalTier.eventId);
 
     // Create new tier with duplicated data
     const newTierData = {

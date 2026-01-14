@@ -14,8 +14,16 @@ import { createRequestLogger, securityLogger } from "@/lib/logging/logger";
 import { z } from "zod";
 
 // Email verification API - will be available after `npx convex dev` regenerates types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const emailVerificationApi = (api as any).emailVerification?.mutations;
+// Dynamically access module that may not exist in generated types
+import type { FunctionReference } from "convex/server";
+type EmailVerificationMutations = Record<string, FunctionReference<"mutation">>;
+type ConvexApiWithEmailVerification = {
+  emailVerification?: {
+    mutations?: EmailVerificationMutations;
+  };
+};
+const emailVerificationApi = (api as unknown as ConvexApiWithEmailVerification)
+  .emailVerification?.mutations;
 
 export async function POST(request: NextRequest) {
   const logger = createRequestLogger(request);

@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server";
+import { Id } from "../_generated/dataModel";
 
 // Seed test restaurants
 export const seedRestaurants = internalMutation({
@@ -259,7 +260,7 @@ export const seedRestaurants = internalMutation({
       const restaurantId = await ctx.db.insert("restaurants", data.restaurant);
 
       // Create categories and track their IDs
-      const categoryIds: Record<string, string> = {};
+      const categoryIds: Record<string, Id<"menuCategories">> = {};
       for (const cat of data.categories) {
         const categoryId = await ctx.db.insert("menuCategories", {
           restaurantId,
@@ -277,7 +278,7 @@ export const seedRestaurants = internalMutation({
       for (const item of data.menuItems) {
         await ctx.db.insert("menuItems", {
           restaurantId,
-          categoryId: categoryIds[item.category] as any,
+          categoryId: categoryIds[item.category],
           name: item.name,
           description: item.description,
           price: item.price,

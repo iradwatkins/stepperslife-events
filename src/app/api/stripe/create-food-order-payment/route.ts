@@ -106,10 +106,10 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
       chargeType: "FOOD_ORDER",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Food Order] Creation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to create payment intent" },
       { status: 500 }
     );
   }
@@ -145,10 +145,10 @@ export async function GET(request: NextRequest) {
       amount: paymentIntent.amount,
       metadata: paymentIntent.metadata,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Food Order] Retrieval error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to retrieve payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to retrieve payment intent" },
       { status: 500 }
     );
   }

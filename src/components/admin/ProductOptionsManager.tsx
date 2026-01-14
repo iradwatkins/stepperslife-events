@@ -20,6 +20,7 @@ import {
   FileUp,
   Image as ImageIcon,
   AlignLeft,
+  LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,9 +65,42 @@ interface ProductOptionsManagerProps {
   options?: ProductOption[];
 }
 
+// Type for option data when adding new option
+interface AddOptionData {
+  name: string;
+  type: OptionType;
+  required: boolean;
+  description?: string;
+  choices?: Choice[];
+  priceModifier?: number;
+  placeholder?: string;
+  minLength?: number;
+  maxLength?: number;
+  minValue?: number;
+  maxValue?: number;
+}
+
+// Type for option updates
+interface UpdateOptionData {
+  name?: string;
+  required?: boolean;
+  description?: string;
+  choices?: Choice[];
+  priceModifier?: number;
+  placeholder?: string;
+  minLength?: number;
+  maxLength?: number;
+  minValue?: number;
+  maxValue?: number;
+}
+
+// Mutation function types
+type AddOptionMutation = (args: { productId: Id<"products">; option: AddOptionData }) => Promise<void>;
+type UpdateOptionMutation = (args: { productId: Id<"products">; optionId: string; updates: UpdateOptionData }) => Promise<void>;
+
 const OPTION_TYPE_INFO: Record<
   OptionType,
-  { icon: any; label: string; description: string; hasChoices: boolean }
+  { icon: LucideIcon; label: string; description: string; hasChoices: boolean }
 > = {
   text: {
     icon: Type,
@@ -258,7 +292,7 @@ function OptionCard({
   onEdit: () => void;
   onCancelEdit: () => void;
   onDelete: () => void;
-  updateOption: any;
+  updateOption: UpdateOptionMutation;
 }) {
   const typeInfo = OPTION_TYPE_INFO[option.type];
   const Icon = typeInfo.icon;
@@ -423,7 +457,7 @@ function AddOptionForm({
   productId: Id<"products">;
   onCancel: () => void;
   onSuccess: () => void;
-  addOption: any;
+  addOption: AddOptionMutation;
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -447,7 +481,7 @@ function AddOptionForm({
     setIsSubmitting(true);
 
     try {
-      const optionData: any = {
+      const optionData: AddOptionData = {
         name: formData.name,
         type: formData.type,
         required: formData.required,
@@ -504,7 +538,7 @@ function AddOptionForm({
     setChoices([...choices, { label: "", priceModifier: 0, default: choices.length === 0 }]);
   };
 
-  const updateChoice = (index: number, field: keyof Choice, value: any) => {
+  const updateChoice = (index: number, field: keyof Choice, value: string | number | boolean | undefined) => {
     const newChoices = [...choices];
     newChoices[index] = { ...newChoices[index], [field]: value };
     setChoices(newChoices);
@@ -794,7 +828,7 @@ function EditOptionForm({
   option: ProductOption;
   onCancel: () => void;
   onSuccess: () => void;
-  updateOption: any;
+  updateOption: UpdateOptionMutation;
 }) {
   const [formData, setFormData] = useState({
     name: option.name,
@@ -817,7 +851,7 @@ function EditOptionForm({
     setIsSubmitting(true);
 
     try {
-      const updates: any = {
+      const updates: UpdateOptionData = {
         name: formData.name,
         required: formData.required,
       };
@@ -873,7 +907,7 @@ function EditOptionForm({
     setChoices([...choices, { label: "", priceModifier: 0, default: choices.length === 0 }]);
   };
 
-  const updateChoice = (index: number, field: keyof Choice, value: any) => {
+  const updateChoice = (index: number, field: keyof Choice, value: string | number | boolean | undefined) => {
     const newChoices = [...choices];
     newChoices[index] = { ...newChoices[index], [field]: value };
     setChoices(newChoices);

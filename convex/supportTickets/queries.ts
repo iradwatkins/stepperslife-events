@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
 
 /**
  * Get tickets for the current user (organizer view)

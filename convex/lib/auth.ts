@@ -1,6 +1,5 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
-import { PRIMARY_ADMIN_EMAIL } from "./roles";
 
 /**
  * Check if testing mode is enabled (only in development deployments)

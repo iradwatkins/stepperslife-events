@@ -1,6 +1,19 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 
+// Type for legacy product variants
+interface ProductVariant {
+  id: string;
+  name: string;
+  options: {
+    size?: string;
+    color?: string;
+  };
+  price?: number;
+  sku?: string;
+  inventoryQuantity: number;
+}
+
 // Create a new product order
 export const createProductOrder = mutation({
   args: {
@@ -110,9 +123,10 @@ export const createProductOrder = mutation({
       if (product.trackInventory) {
         if (item.variantId && product.variants) {
           // Update legacy variant inventory
-          const variantIndex = product.variants.findIndex((v: any) => v.id === item.variantId);
+          const variants = product.variants as ProductVariant[];
+          const variantIndex = variants.findIndex((v) => v.id === item.variantId);
           if (variantIndex >= 0) {
-            const variant = product.variants[variantIndex] as any;
+            const variant = variants[variantIndex];
             if (variant.inventoryQuantity < item.quantity) {
               throw new Error(
                 `Insufficient inventory for ${item.productName} - ${item.variantName}`
@@ -186,7 +200,15 @@ export const updateFulfillmentStatus = mutation({
   handler: async (ctx, args) => {
     const { orderId, fulfillmentStatus, trackingNumber, trackingUrl, internalNote } = args;
 
-    const updateData: any = {
+    const updateData: {
+      fulfillmentStatus: typeof fulfillmentStatus;
+      updatedAt: number;
+      trackingNumber?: string;
+      trackingUrl?: string;
+      shippedAt?: number;
+      deliveredAt?: number;
+      internalNote?: string;
+    } = {
       fulfillmentStatus,
       updatedAt: Date.now(),
     };
@@ -233,7 +255,13 @@ export const updatePaymentStatus = mutation({
   handler: async (ctx, args) => {
     const { orderId, paymentStatus, paymentMethod, stripePaymentIntentId } = args;
 
-    const updateData: any = {
+    const updateData: {
+      paymentStatus: typeof paymentStatus;
+      updatedAt: number;
+      paidAt?: number;
+      paymentMethod?: string;
+      stripePaymentIntentId?: string;
+    } = {
       paymentStatus,
       updatedAt: Date.now(),
     };

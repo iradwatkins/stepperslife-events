@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -24,11 +24,6 @@ export default function PaymentMethodsPage() {
   const router = useRouter();
   const eventId = params.eventId as Id<"events">;
 
-  const [selectedProcessor, setSelectedProcessor] = useState<MerchantProcessor | null>(null);
-  const [creditCardEnabled, setCreditCardEnabled] = useState(true);
-  const [cashAppEnabled, setCashAppEnabled] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
   // Queries
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const event = useQuery(api.events.queries.getEventById, { eventId });
@@ -39,16 +34,31 @@ export default function PaymentMethodsPage() {
 
   const isLoading = event === undefined || currentUser === undefined;
 
-  // Initialize state from existing config
-  useEffect(() => {
+  // Compute initial values from paymentConfig
+  const initialValues = useMemo(() => {
     if (paymentConfig) {
-      setSelectedProcessor((paymentConfig.merchantProcessor as MerchantProcessor) || null);
-      // Check if STRIPE is in customerPaymentMethods array
-      setCreditCardEnabled(paymentConfig.customerPaymentMethods?.includes("STRIPE") ?? true);
-      // Check if CASHAPP is in customerPaymentMethods array
-      setCashAppEnabled(paymentConfig.customerPaymentMethods?.includes("CASHAPP") ?? false);
+      return {
+        processor: (paymentConfig.merchantProcessor as MerchantProcessor) || null,
+        creditCard: paymentConfig.customerPaymentMethods?.includes("STRIPE") ?? true,
+        cashApp: paymentConfig.customerPaymentMethods?.includes("CASHAPP") ?? false,
+      };
     }
+    return { processor: null, creditCard: true, cashApp: false };
   }, [paymentConfig]);
+
+  const [selectedProcessor, setSelectedProcessor] = useState<MerchantProcessor | null>(null);
+  const [creditCardEnabled, setCreditCardEnabled] = useState(true);
+  const [cashAppEnabled, setCashAppEnabled] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Initialize state once when paymentConfig loads
+  if (paymentConfig && !hasInitialized) {
+    setSelectedProcessor(initialValues.processor);
+    setCreditCardEnabled(initialValues.creditCard);
+    setCashAppEnabled(initialValues.cashApp);
+    setHasInitialized(true);
+  }
 
   // Check if user is the organizer
   if (!isLoading && event && event.organizerId !== currentUser?._id) {
@@ -56,7 +66,7 @@ export default function PaymentMethodsPage() {
       <div className="min-h-screen bg-card flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-md p-8 max-w-md text-center">
           <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <p className="text-muted-foreground">You don't have permission to access this page.</p>
+          <p className="text-muted-foreground">You don&apos;t have permission to access this page.</p>
           <Link href="/" className="mt-4 inline-block text-primary hover:underline">
             Go to Homepage
           </Link>
@@ -82,8 +92,8 @@ export default function PaymentMethodsPage() {
 
       toast.success("Payment methods updated successfully!");
       router.push(`/organizer/events/${eventId}`);
-    } catch (error: any) {
-      toast.error(`Failed to update payment methods: ${error.message}`);
+    } catch (error) {
+      toast.error(`Failed to update payment methods: ${error instanceof Error ? error.message : "Unknown error"}`);
       setIsSaving(false);
     }
   };

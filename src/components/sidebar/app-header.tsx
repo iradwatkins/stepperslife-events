@@ -28,10 +28,27 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
+// User type for API auth response
+interface AuthUser {
+  _id?: string;
+  name?: string;
+  email?: string;
+  role?: "admin" | "organizer" | "staff" | "team" | "vendor" | "restaurateur" | "user";
+}
+
+// Creator profiles type
+interface CreatorProfiles {
+  isOrganizer?: boolean;
+  hasInstructor?: boolean;
+  hasVendor?: boolean;
+  hasRestaurant?: boolean;
+  hasServiceProvider?: boolean;
+}
+
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   // Query for instructor profile if user is logged in
@@ -44,7 +61,7 @@ export function AppHeader() {
   const creatorProfiles = useQuery(api.users.queries.getCreatorProfiles);
 
   // Helper function to generate roles display
-  const getUserRolesDisplay = (user: any, profiles: any) => {
+  const getUserRolesDisplay = (user: AuthUser | null, profiles: CreatorProfiles | null | undefined) => {
     const roles: string[] = ["Customer"]; // Everyone is a customer
 
     if (profiles?.isOrganizer) roles.push("Organizer");

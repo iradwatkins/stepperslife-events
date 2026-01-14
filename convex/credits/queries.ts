@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
 
 /**
  * Get credit balance for organizer
@@ -58,7 +57,7 @@ export const getMyCredits = query({
     let userInfo;
     try {
       userInfo = typeof identity === "string" ? JSON.parse(identity) : identity;
-    } catch (error) {
+    } catch {
       userInfo = identity;
     }
 

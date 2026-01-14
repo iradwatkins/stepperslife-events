@@ -434,8 +434,8 @@ export const apply = mutation({
       await ctx.db.patch(user._id, { role: "restaurateur" });
 
       return restaurantId;
-    } catch (error: any) {
-      console.error("[restaurants:apply] Error:", error.message || error);
+    } catch (error) {
+      console.error("[restaurants:apply] Error:", error instanceof Error ? error.message : String(error));
       throw error;
     }
   },
@@ -640,7 +640,7 @@ export const getMyRestaurantStatus = query({
                   ? "Your restaurant has been temporarily suspended."
                   : "Unknown status",
       };
-    } catch (error) {
+    } catch {
       // User not authenticated
       return {
         hasRestaurant: false,

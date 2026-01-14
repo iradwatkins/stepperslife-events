@@ -6,6 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { User, Mail, Phone, Calendar, Ticket, DollarSign, TrendingUp } from "lucide-react";
 
+// Extended user type for profile fields
+interface UserWithProfile {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
 export default function TeamProfilePage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const staffDashboard = useQuery(api.staff.queries.getStaffDashboard);
@@ -53,10 +60,10 @@ export default function TeamProfilePage() {
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span>{currentUser?.email}</span>
                   </div>
-                  {(currentUser as any)?.phone && (
+                  {(currentUser as UserWithProfile)?.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{(currentUser as any).phone}</span>
+                      <span>{(currentUser as UserWithProfile).phone}</span>
                     </div>
                   )}
                 </div>

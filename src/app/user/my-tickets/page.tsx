@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Ticket as TicketIcon, Calendar, MapPin, QrCode, Download, Share2, ArrowRight } from "lucide-react";
@@ -24,16 +23,17 @@ interface TicketData {
 }
 
 export default function MyTicketsPage() {
-  const currentUser = useQuery(api.users.queries.getCurrentUser);
-
   // Mock ticket data - will be replaced with actual Convex query
   const tickets: TicketData[] = [];
 
+  // Store current time in state to avoid calling impure function during render
+  const [now] = useState(() => Date.now());
+
   const upcomingTickets = tickets.filter((ticket) =>
-    ticket.eventDate > Date.now()
+    ticket.eventDate > now
   );
   const pastTickets = tickets.filter((ticket) =>
-    ticket.eventDate <= Date.now()
+    ticket.eventDate <= now
   );
 
   const formatDate = (timestamp: number) => {
@@ -42,11 +42,6 @@ export default function MyTicketsPage() {
       month: "short",
       day: "numeric",
       year: "numeric",
-    });
-  };
-
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
     });
@@ -200,7 +195,7 @@ export default function MyTicketsPage() {
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
                               <span>
-                                {formatDate(ticket.eventDate)} at {formatTime(ticket.eventDate)}
+                                {formatDate(ticket.eventDate)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">

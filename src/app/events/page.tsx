@@ -36,13 +36,18 @@ async function fetchWithTimeout<T>(
   }
 }
 
+// Get current timestamp (server-side only, runs once per request)
+function getServerTimestamp(): number {
+  return Date.now();
+}
+
 export default async function EventsPage() {
   // Initialize Convex HTTP client for server-side data fetching
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
   const convex = new ConvexHttpClient(convexUrl);
 
   // Calculate filter date ranges based on server's time
-  const now = Date.now();
+  const now = getServerTimestamp();
   const getEndOfDay = (date: Date) => {
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);

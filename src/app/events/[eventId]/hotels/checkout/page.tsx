@@ -23,7 +23,6 @@ import {
   UserCheck,
   CreditCard,
   Calendar,
-  MapPin,
   Users,
   Bed,
 } from "lucide-react";
@@ -87,8 +86,11 @@ export default function HotelCheckoutPage() {
     if (stored) {
       try {
         const details = JSON.parse(stored);
-        setBookingDetails(details);
-      } catch (e) {
+        // Use queueMicrotask to avoid synchronous setState during render
+        queueMicrotask(() => {
+          setBookingDetails(details);
+        });
+      } catch {
         console.error("Failed to parse booking details");
         router.push(`/events/${eventId}`);
       }
@@ -101,8 +103,11 @@ export default function HotelCheckoutPage() {
   // Pre-fill user info if logged in
   useEffect(() => {
     if (currentUser) {
-      setGuestName(currentUser.name || "");
-      setGuestEmail(currentUser.email || "");
+      // Use queueMicrotask to avoid synchronous setState during render
+      queueMicrotask(() => {
+        setGuestName(currentUser.name || "");
+        setGuestEmail(currentUser.email || "");
+      });
     }
   }, [currentUser]);
 
@@ -147,8 +152,8 @@ export default function HotelCheckoutPage() {
 
       setReservationId(result.reservationId);
       setConfirmationNumber(result.confirmationNumber);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create reservation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create reservation");
       setIsProcessing(false);
     }
   };
@@ -167,8 +172,8 @@ export default function HotelCheckoutPage() {
       // Clear session storage
       sessionStorage.removeItem("hotelBookingDetails");
       setIsSuccess(true);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to confirm reservation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to confirm reservation");
     }
   };
 
@@ -466,7 +471,7 @@ export default function HotelCheckoutPage() {
                   connectedAccountId=""
                   platformFee={bookingDetails.platformFeeCents}
                   orderId={reservationId}
-                  orderNumber={`HOTEL-${Date.now()}`}
+                  orderNumber={`HOTEL-${reservationId}`}
                   billingContact={{
                     givenName: guestName.split(" ")[0],
                     familyName: guestName.split(" ").slice(1).join(" "),

@@ -7,11 +7,20 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, Plus, Trash2, Check } from "lucide-react";
 import Link from "next/link";
 
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+}
+
 export default function PaymentMethodsPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
 
   // Mock data - will be replaced with actual Convex query
-  const paymentMethods: any[] = [];
+  const paymentMethods: PaymentMethod[] = [];
 
   const getCardIcon = (brand: string) => {
     // In production, would return actual card brand icons
@@ -62,7 +71,7 @@ export default function PaymentMethodsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {paymentMethods.map((method: any) => (
+          {paymentMethods.map((method) => (
             <Card key={method.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">

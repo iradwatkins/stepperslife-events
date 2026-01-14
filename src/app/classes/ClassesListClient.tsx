@@ -10,9 +10,8 @@ import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
 import { ClassesSubNav } from "@/components/layout/ClassesSubNav";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-import { ViewToggle, ViewMode, getViewClasses } from "@/components/ui/ViewToggle";
-import { PortfolioGrid } from "@/components/shadcn-studio/blocks/portfolio-01/portfolio-01";
+import { motion } from "framer-motion";
+import { ViewToggle, ViewMode } from "@/components/ui/ViewToggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +22,9 @@ import { Id } from "@/../convex/_generated/dataModel";
 // Extended type for class events with class-specific fields
 // These fields map to schema: classLevel -> level, etc.
 type ClassEvent = {
+  _id: string; // Required for React key
+  name?: string;
+  description?: string;
   level?: string; // Maps to classLevel in schema
   instructorName?: string; // Instructor name
   instructorSlug?: string; // Instructor slug for linking to profile
@@ -34,7 +36,23 @@ type ClassEvent = {
   lowestPriceCents?: number | null; // Lowest ticket price in cents
   averageRating?: number; // Average review rating (1-5)
   totalReviews?: number; // Total number of reviews
-  [key: string]: unknown;
+  startDate?: number;
+  endDate?: number;
+  eventDateLiteral?: string; // Pre-formatted date string
+  eventTimeLiteral?: string; // Pre-formatted time string
+  location?: string | {
+    city?: string;
+    state?: string;
+    venueName?: string;
+    address?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  imageUrl?: string;
+  isRecurring?: boolean;
+  daysOfWeek?: number[];
+  categories?: string[];
+  timezone?: string;
 };
 
 // Helper to format price display
@@ -61,15 +79,13 @@ const PRICE_RANGES = [
 
 // Props for server-side initial data (hybrid SSR + CSR pattern)
 interface ClassesListClientProps {
-  initialClasses?: any[];
-  initialCategories?: any[];
+  initialClasses?: ClassEvent[];
   initialInstructors?: { slug: string; name: string; verified?: boolean }[];
   showPastByDefault?: boolean; // For /classes/all route to show all classes including past
 }
 
 export default function ClassesListClient({
   initialClasses,
-  initialCategories,
   initialInstructors,
   showPastByDefault = false,
 }: ClassesListClientProps = {}) {
@@ -97,7 +113,9 @@ export default function ClassesListClient({
     instructorSlug: selectedInstructor || undefined,
   });
   // Use client query if available, otherwise fall back to server-side initial data
-  const classesRaw = classesQuery ?? initialClasses ?? [];
+  const classesRaw = useMemo(() => {
+    return classesQuery ?? initialClasses ?? [];
+  }, [classesQuery, initialClasses]);
 
   // Helper to extract city from location (supports both object and string format)
   const getClassCity = useCallback((c: ClassEvent): string | null => {
@@ -151,9 +169,6 @@ export default function ClassesListClient({
     return filtered;
   }, [classesRaw, selectedPriceRange, selectedCity, getClassCity]);
 
-  const categoriesQuery = useQuery(api.public.queries.getClassCategories, {});
-  const categories = categoriesQuery ?? initialCategories ?? [];
-
   const instructorsQuery = useQuery(api.public.queries.getClassInstructors, {});
   const instructors = instructorsQuery ?? initialInstructors ?? [];
 
@@ -191,7 +206,10 @@ export default function ClassesListClient({
       }, 10000);
       return () => clearTimeout(timer);
     } else {
-      setLoadingTimeout(false);
+      // Use queueMicrotask to avoid synchronous setState during render
+      queueMicrotask(() => {
+        setLoadingTimeout(false);
+      });
     }
   }, [classesQuery, initialClasses]);
 
@@ -246,7 +264,7 @@ export default function ClassesListClient({
                 Classes Temporarily Unavailable
               </h3>
               <p className="text-muted-foreground mb-6">
-                We're having trouble loading classes right now. You can try again or browse our demo classes.
+                We&apos;re having trouble loading classes right now. You can try again or browse our demo classes.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <motion.button
@@ -1107,7 +1125,7 @@ export default function ClassesListClient({
                                 {classItem.imageUrl ? (
                                   <Image
                                     src={classItem.imageUrl}
-                                    alt={classItem.name}
+                                    alt={classItem.name || "Class"}
                                     fill
                                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                     className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -1257,7 +1275,7 @@ export default function ClassesListClient({
                           {classItem.imageUrl ? (
                             <Image
                               src={classItem.imageUrl}
-                              alt={classItem.name}
+                              alt={classItem.name || "Class"}
                               fill
                               sizes="(max-width: 640px) 100vw, 256px"
                               className="object-cover"
@@ -1416,7 +1434,7 @@ export default function ClassesListClient({
                         {classItem.imageUrl ? (
                           <Image
                             src={classItem.imageUrl}
-                            alt={classItem.name}
+                            alt={classItem.name || "Class"}
                             fill
                             sizes="(max-width: 640px) 50vw, 33vw"
                             className="object-cover group-hover:scale-105 transition-transform duration-300"

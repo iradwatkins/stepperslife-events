@@ -1,5 +1,5 @@
 import { mutation, internalMutation } from "../_generated/server";
-import { v } from "convex/values";
+import { TableNames } from "../_generated/dataModel";
 
 /**
  * Factory Reset - Delete ALL data from ALL 74 tables, preserving admin users
@@ -125,7 +125,7 @@ export const factoryReset = internalMutation({
     // Delete all records from all tables
     for (const tableName of allTables) {
       try {
-        const documents = await ctx.db.query(tableName as any).collect();
+        const documents = await ctx.db.query(tableName as TableNames).collect();
         let count = 0;
         for (const doc of documents) {
           await ctx.db.delete(doc._id);
@@ -133,7 +133,7 @@ export const factoryReset = internalMutation({
           totalDeleted++;
         }
         results[tableName] = count;
-      } catch (error: any) {
+      } catch {
         results[tableName] = -1; // Table doesn't exist or error
       }
     }
@@ -141,7 +141,7 @@ export const factoryReset = internalMutation({
     // Handle users table specially - preserve admin users
     const allUsers = await ctx.db.query("users").collect();
     let usersDeleted = 0;
-    const preservedUsers: Array<{ id: any; email: string; name?: string }> = [];
+    const preservedUsers: Array<{ id: string; email: string; name?: string }> = [];
 
     for (const user of allUsers) {
       if (keepEmails.includes(user.email || "")) {
@@ -225,7 +225,7 @@ export const resetAllData = mutation({
       try {
 
         // Query all documents in the table
-        const documents = await ctx.db.query(tableName as any).collect();
+        const documents = await ctx.db.query(tableName as TableNames).collect();
 
         // Delete each document
         for (const doc of documents) {
@@ -233,7 +233,7 @@ export const resetAllData = mutation({
           totalDeleted++;
         }
 
-      } catch (error: any) {
+      } catch {
         // If table doesn't exist or query fails, log but continue
       }
     }
@@ -295,10 +295,10 @@ export const verifySystemEmpty = mutation({
 
     for (const tableName of tables) {
       try {
-        const count = (await ctx.db.query(tableName as any).collect()).length;
+        const count = (await ctx.db.query(tableName as TableNames).collect()).length;
         results[tableName] = count;
         totalRecords += count;
-      } catch (error: any) {
+      } catch {
         results[tableName] = -1; // Indicates table doesn't exist or error
       }
     }

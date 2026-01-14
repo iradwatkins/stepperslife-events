@@ -7,7 +7,7 @@
  * @module permissions
  */
 
-import { USER_ROLES, STAFF_ROLES, RESTAURANT_STAFF_ROLES, HIERARCHY_CONFIG, type UserRole, type StaffRole, type RestaurantStaffRole } from "./roles";
+import { USER_ROLES, STAFF_ROLES, HIERARCHY_CONFIG, type RestaurantStaffRole } from "./roles";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 

@@ -224,7 +224,7 @@ export function userHasRole(user: NavUser | null, role: AllRoles): boolean {
 
   if (user.role === role) return true;
 
-  if (user.staffRoles && user.staffRoles.includes(role as any)) {
+  if (user.staffRoles && (user.staffRoles as string[]).includes(role)) {
     return true;
   }
 

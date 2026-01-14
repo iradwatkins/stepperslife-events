@@ -191,7 +191,7 @@ export function isValidCreditAmount(credits: number): boolean {
  * Validate currency code
  */
 export function isValidCurrency(currency: string): boolean {
-  return CURRENCIES.SUPPORTED.includes(currency as any);
+  return (CURRENCIES.SUPPORTED as readonly string[]).includes(currency);
 }
 
 // ============================================================================

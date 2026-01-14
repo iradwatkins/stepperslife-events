@@ -18,6 +18,18 @@ import { toast } from "sonner";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
+interface CurrentUser {
+  email: string;
+  name?: string;
+  role?: string;
+  stripeAccountSetupComplete?: boolean;
+  acceptsStripePayments?: boolean;
+  stripeConnectedAccountId?: string;
+  paypalMerchantId?: string;
+  acceptsPaypalPayments?: boolean;
+  acceptsCashPayments?: boolean;
+}
+
 export default function SettingsPage() {
   const updatePaymentSettings = useMutation(api.users.mutations.updatePaymentProcessorSettings);
   const connectStripe = useMutation(api.users.mutations.connectStripeAccount);
@@ -27,7 +39,7 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [processorToDisconnect, setProcessorToDisconnect] = useState<"stripe" | "paypal" | null>(null);
   const confirmDialog = useConfirmDialog();
@@ -48,6 +60,8 @@ export default function SettingsPage() {
   }, []);
 
   const handleConnectStripe = async () => {
+    if (!currentUser) return;
+
     try {
       setIsProcessing(true);
 
@@ -124,7 +138,11 @@ export default function SettingsPage() {
   ) => {
     try {
       setIsProcessing(true);
-      const updates: any = {};
+      const updates: {
+        acceptsStripePayments?: boolean;
+        acceptsPaypalPayments?: boolean;
+        acceptsCashPayments?: boolean;
+      } = {};
 
       if (method === "stripe") updates.acceptsStripePayments = enabled;
       if (method === "paypal") updates.acceptsPaypalPayments = enabled;

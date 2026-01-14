@@ -2,6 +2,34 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { requireEventOwnership } from "../lib/auth";
 
+// Types for seating chart sections and rows
+interface SeatingRow {
+  id: string;
+  label: string;
+  curved?: boolean;
+  seats: Array<{
+    id: string;
+    number: string;
+    type: "STANDARD" | "WHEELCHAIR" | "COMPANION" | "VIP" | "BLOCKED" | "STANDING" | "PARKING" | "TENT";
+    status: "AVAILABLE" | "RESERVED" | "UNAVAILABLE" | "BLOCKED";
+    sessionId?: string;
+    sessionExpiry?: number;
+  }>;
+}
+
+interface SeatingSection {
+  id: string;
+  name: string;
+  color?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+  containerType?: "ROWS" | "TABLES";
+  rows?: SeatingRow[];
+}
+
 /**
  * Self-hosted Convex backend URL.
  * IMPORTANT: This is hardcoded because Convex functions run in an isolated runtime
@@ -101,11 +129,12 @@ export const getMyTickets = query({
         if (seatReservation) {
           const seatingChart = await ctx.db.get(seatReservation.seatingChartId);
           if (seatingChart) {
-            const section = seatingChart.sections.find(
-              (s: any) => s.id === seatReservation.sectionId
+            const sections = seatingChart.sections as SeatingSection[];
+            const section = sections.find(
+              (s) => s.id === seatReservation.sectionId
             );
             if (section) {
-              const row = section.rows?.find((r: any) => r.id === seatReservation.rowId);
+              const row = section.rows?.find((r) => r.id === seatReservation.rowId);
               seatInfo = {
                 sectionName: section.name,
                 rowLabel: row?.label || "",
@@ -167,6 +196,7 @@ export const getTicketByOrderNumber = query({
   args: {
     orderNumber: v.string(),
   },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handler: async (ctx, args) => {
     // Function temporarily disabled - orderNumber field doesn't exist in schema
     return null;
@@ -395,9 +425,10 @@ export const getTicketByCode = query({
     if (seatReservation) {
       const seatingChart = await ctx.db.get(seatReservation.seatingChartId);
       if (seatingChart) {
-        const section = seatingChart.sections.find((s: any) => s.id === seatReservation.sectionId);
+        const sections = seatingChart.sections as SeatingSection[];
+        const section = sections.find((s) => s.id === seatReservation.sectionId);
         if (section) {
-          const row = section.rows?.find((r: any) => r.id === seatReservation.rowId);
+          const row = section.rows?.find((r) => r.id === seatReservation.rowId);
           seatInfo = {
             sectionName: section.name,
             rowLabel: row?.label || "",

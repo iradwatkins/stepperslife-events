@@ -123,3 +123,51 @@ export interface BuilderState {
   history: CanvasState[]; // for undo/redo
   historyIndex: number;
 }
+
+/**
+ * Backend seat format
+ */
+export interface BackendSeat {
+  id: string;
+  number: string;
+  type?: string;
+  status?: string;
+  position?: {
+    angle?: number;
+    side?: string;
+    offset?: number;
+  };
+}
+
+/**
+ * Backend row format
+ */
+export interface BackendRow {
+  id: string;
+  label?: string;
+  seats?: BackendSeat[];
+}
+
+/**
+ * Backend table format
+ */
+export interface BackendTable {
+  id: string;
+  shape?: string;
+  capacity?: number;
+  seats?: BackendSeat[];
+  position?: { x: number; y: number };
+  rotation?: number;
+  label?: string;
+}
+
+/**
+ * Backend section format (from database)
+ */
+export interface BackendSection {
+  id?: string;
+  name?: string;
+  color?: string;
+  tables?: BackendTable[];
+  rows?: BackendRow[];
+}

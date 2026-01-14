@@ -54,66 +54,63 @@ export function ProviderDashboardNav({
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const NavContent = () => (
-    <>
-      {/* Provider Info */}
-      <div className="p-4 border-b border-border">
-        <h2 className="font-semibold text-foreground truncate">{providerName}</h2>
-        <span
-          className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-            providerStatus === "APPROVED"
-              ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-              : providerStatus === "PENDING"
-              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
-              : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-          }`}
-        >
-          {providerStatus}
-        </span>
-      </div>
+  const statusClassName =
+    providerStatus === "APPROVED"
+      ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+      : providerStatus === "PENDING"
+      ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+      : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
 
-      {/* Navigation Links */}
-      <nav className="p-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-              {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* View Public Listing */}
-      <div className="p-4 mt-auto border-t border-border">
-        <Link
-          href={`/services/provider/${providerName.toLowerCase().replace(/\s+/g, "-")}`}
-          className="text-sm text-primary hover:underline"
-        >
-          View public listing →
-        </Link>
-      </div>
-    </>
-  );
+  const publicListingHref = `/services/provider/${providerName.toLowerCase().replace(/\s+/g, "-")}`;
 
   return (
     <>
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 md:left-0 md:pt-16 bg-card border-r border-border">
-        <NavContent />
+        {/* Provider Info */}
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground truncate">{providerName}</h2>
+          <span
+            className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusClassName}`}
+          >
+            {providerStatus}
+          </span>
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="p-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+                {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* View Public Listing */}
+        <div className="p-4 mt-auto border-t border-border">
+          <Link
+            href={publicListingHref}
+            className="text-sm text-primary hover:underline"
+          >
+            View public listing →
+          </Link>
+        </div>
       </aside>
 
       {/* Mobile Header */}
@@ -124,13 +121,7 @@ export function ProviderDashboardNav({
               {providerName}
             </h2>
             <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                providerStatus === "APPROVED"
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                  : providerStatus === "PENDING"
-                  ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
-                  : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-              }`}
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClassName}`}
             >
               {providerStatus}
             </span>

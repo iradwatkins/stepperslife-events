@@ -3,6 +3,36 @@
 import { useState } from "react";
 import { Filter, X, ChevronDown } from "lucide-react";
 
+// Compact Filter Select Component - defined outside to avoid recreating on each render
+function FilterSelect({
+  value,
+  options,
+  onChange,
+  className = "",
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none w-full px-3 py-2 pr-8 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+    </div>
+  );
+}
+
 export interface ClassFiltersState {
   status: "all" | "published" | "draft";
   danceStyle: string;
@@ -91,34 +121,6 @@ export function ClassFilters({
         })),
       ]
     : DEFAULT_DANCE_STYLES;
-
-  // Compact Filter Select Component
-  const FilterSelect = ({
-    value,
-    options,
-    onChange,
-    className = "",
-  }: {
-    value: string;
-    options: { value: string; label: string }[];
-    onChange: (value: string) => void;
-    className?: string;
-  }) => (
-    <div className={`relative ${className}`}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none w-full px-3 py-2 pr-8 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-    </div>
-  );
 
   return (
     <div className="flex flex-col gap-2">

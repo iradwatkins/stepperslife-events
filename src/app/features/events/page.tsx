@@ -19,21 +19,27 @@ import {
   BarChart3,
   Bell,
   Globe,
-  Smartphone,
   Shield,
-  Zap,
   CheckCircle2,
   ArrowRight,
   Star,
-  TrendingUp,
   Play,
   Sparkles,
   Target,
-  Clock,
   Gift,
-  Award,
   MapPin,
 } from "lucide-react";
+
+// Pre-compute floating circle positions outside component to satisfy React purity rules
+const FLOATING_CIRCLES = [...Array(15)].map((_, i) => ({
+  id: i,
+  width: 50 + ((i * 37 + 13) % 200), // Deterministic pseudo-random: 50-250
+  height: 50 + ((i * 41 + 17) % 200),
+  left: (i * 23 + 7) % 100, // Deterministic distribution across width
+  top: (i * 29 + 11) % 100, // Deterministic distribution across height
+  xOffset: ((i * 19) % 20) - 10, // -10 to 10 range
+  duration: 5 + (i % 5), // 5-10 seconds
+}));
 
 export default function EventsFeaturesPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,23 +78,23 @@ export default function EventsFeaturesPage() {
           className="absolute inset-0 overflow-hidden"
         >
           {/* Floating Circles */}
-          {[...Array(15)].map((_, i) => (
+          {FLOATING_CIRCLES.map((circle) => (
             <motion.div
-              key={i}
+              key={circle.id}
               className="absolute rounded-full bg-white/10"
               style={{
-                width: Math.random() * 200 + 50,
-                height: Math.random() * 200 + 50,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
+                width: circle.width,
+                height: circle.height,
+                left: `${circle.left}%`,
+                top: `${circle.top}%`,
               }}
               animate={{
                 y: [0, -30, 0],
-                x: [0, Math.random() * 20 - 10, 0],
+                x: [0, circle.xOffset, 0],
                 scale: [1, 1.1, 1],
               }}
               transition={{
-                duration: Math.random() * 5 + 5,
+                duration: circle.duration,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}

@@ -492,9 +492,9 @@ export default function CreateEventPage() {
       router.push("/organizer/events");
 
       setTimeout(() => setIsSubmitting(false), 2000);
-    } catch (error: any) {
+    } catch (error) {
       console.error("[CREATE EVENT] Error:", error);
-      toast.error(error.message || "Failed to create event");
+      toast.error(error instanceof Error ? error.message : "Failed to create event");
       setIsSubmitting(false);
     }
   };

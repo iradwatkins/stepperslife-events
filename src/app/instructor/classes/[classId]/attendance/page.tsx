@@ -36,6 +36,27 @@ interface AttendanceRecord {
   notes?: string;
 }
 
+// Type for history data from Convex query
+interface HistoryRecord {
+  sessionDate: number;
+  studentName: string;
+  studentEmail: string;
+  status: AttendanceStatus;
+  notes?: string;
+}
+
+// Type for per-student stats from Convex query
+interface StudentStatRecord {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  present: number;
+  late: number;
+  absent: number;
+  excused: number;
+  attendanceRate: number;
+}
+
 export default function ClassAttendancePage({ params }: PageProps) {
   const { classId: classIdStr } = use(params);
   const classId = classIdStr as Id<"events">;
@@ -161,9 +182,9 @@ export default function ClassAttendancePage({ params }: PageProps) {
       });
 
       toast.success("Attendance saved successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Save attendance error:", error);
-      toast.error(error.message || "Failed to save attendance");
+      toast.error(error instanceof Error ? error.message : "Failed to save attendance");
     } finally {
       setIsSaving(false);
     }
@@ -190,9 +211,9 @@ export default function ClassAttendancePage({ params }: PageProps) {
       setAttendanceMap(newMap);
 
       toast.success("All students marked as present!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Mark all present error:", error);
-      toast.error(error.message || "Failed to mark all present");
+      toast.error(error instanceof Error ? error.message : "Failed to mark all present");
     } finally {
       setIsSaving(false);
     }
@@ -207,7 +228,7 @@ export default function ClassAttendancePage({ params }: PageProps) {
 
     // Build CSV content
     const headers = ["Date", "Student Name", "Email", "Status", "Notes"];
-    const rows = historyData.map((record: any) => [
+    const rows = (historyData as HistoryRecord[]).map((record) => [
       new Date(record.sessionDate).toLocaleDateString(),
       record.studentName,
       record.studentEmail,
@@ -217,7 +238,7 @@ export default function ClassAttendancePage({ params }: PageProps) {
 
     const csvContent = [
       headers.join(","),
-      ...rows.map((row: string[]) =>
+      ...rows.map((row) =>
         row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
       ),
     ].join("\n");
@@ -419,7 +440,7 @@ export default function ClassAttendancePage({ params }: PageProps) {
                       </td>
                     </tr>
                   ) : (
-                    historyData.map((record: any, index: number) => (
+                    (historyData as HistoryRecord[]).map((record, index) => (
                       <tr key={index} className="hover:bg-muted/50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           {new Date(record.sessionDate).toLocaleDateString()}
@@ -678,7 +699,7 @@ export default function ClassAttendancePage({ params }: PageProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {statsData.perStudentStats.map((stat: any) => (
+                  {(statsData.perStudentStats as StudentStatRecord[]).map((stat) => (
                     <tr key={stat.studentId} className="hover:bg-muted/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>

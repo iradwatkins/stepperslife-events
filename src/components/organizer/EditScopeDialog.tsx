@@ -47,7 +47,7 @@ export function EditScopeDialog({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const DialogBody = () => (
+  const dialogBodyContent = (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         This class is part of a recurring series. What would you like to edit?
@@ -119,10 +119,10 @@ export function EditScopeDialog({
       <BottomSheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <BottomSheetContent size="auto">
           <BottomSheetHeader>
-            <BottomSheetTitle>Edit "{eventTitle}"</BottomSheetTitle>
+            <BottomSheetTitle>Edit &ldquo;{eventTitle}&rdquo;</BottomSheetTitle>
           </BottomSheetHeader>
           <BottomSheetBody>
-            <DialogBody />
+            {dialogBodyContent}
           </BottomSheetBody>
         </BottomSheetContent>
       </BottomSheet>
@@ -134,12 +134,12 @@ export function EditScopeDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit "{eventTitle}"</DialogTitle>
+          <DialogTitle>Edit &ldquo;{eventTitle}&rdquo;</DialogTitle>
           <DialogDescription className="sr-only">
             Choose whether to edit this single class or the entire series
           </DialogDescription>
         </DialogHeader>
-        <DialogBody />
+        {dialogBodyContent}
       </DialogContent>
     </Dialog>
   );

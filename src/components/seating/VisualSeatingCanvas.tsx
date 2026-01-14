@@ -13,7 +13,25 @@ import {
   EyeOff,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Id } from "@/convex/_generated/dataModel";
 import TableRenderer from "./TableRenderer";
+
+type SeatType = "STANDARD" | "WHEELCHAIR" | "COMPANION" | "VIP" | "BLOCKED" | "STANDING" | "PARKING" | "TENT";
+type SeatStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
+
+interface Seat {
+  id: string;
+  number: string;
+  type: SeatType;
+  status: SeatStatus;
+}
+
+interface Row {
+  id: string;
+  label: string;
+  rowNumber?: number;
+  seats: Seat[];
+}
 
 interface Table {
   id: string;
@@ -25,7 +43,7 @@ interface Table {
   height: number;
   rotation?: number;
   capacity: number;
-  seats: any[];
+  seats: Seat[];
 }
 
 interface Section {
@@ -38,9 +56,9 @@ interface Section {
   height?: number;
   rotation?: number;
   containerType?: "ROWS" | "TABLES";
-  rows?: any[];
+  rows?: Row[];
   tables?: Table[];
-  ticketTierId?: any;
+  ticketTierId?: Id<"ticketTiers">;
 }
 
 interface VisualSeatingCanvasProps {

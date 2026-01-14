@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Ticket, DollarSign } from "lucide-react";
+import { Calendar } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function ActiveEventsPage() {
   const staffDashboard = useQuery(api.staff.queries.getStaffDashboard);
@@ -12,10 +14,10 @@ export default function ActiveEventsPage() {
   const isLoading = staffDashboard === undefined;
 
   // Filter to upcoming events
-  const now = Date.now();
-  const activeEvents = staffDashboard?.filter(
+  const [now] = useState(() => Date.now());
+  const activeEvents = useMemo(() => staffDashboard?.filter(
     (position) => position.event && (position.event.startDate ?? 0) >= now
-  ) || [];
+  ) || [], [staffDashboard, now]);
 
   return (
     <div className="p-6 space-y-6">
@@ -52,9 +54,11 @@ export default function ActiveEventsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
                     {position.event.imageUrl && (
-                      <img
+                      <Image
                         src={position.event.imageUrl}
                         alt={position.event.name}
+                        width={80}
+                        height={80}
                         className="w-20 h-20 rounded-lg object-cover"
                       />
                     )}

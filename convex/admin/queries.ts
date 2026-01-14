@@ -26,7 +26,6 @@ export const getCreditStats = query({
     const totalTicketsSold = allTransactions.reduce((sum, t) => sum + t.ticketsPurchased, 0);
 
     // Get this month's transactions
-    const now = Date.now();
     const firstDayOfMonth = new Date();
     firstDayOfMonth.setDate(1);
     firstDayOfMonth.setHours(0, 0, 0, 0);

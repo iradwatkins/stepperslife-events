@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 
 interface TierCountdownProps {
@@ -85,7 +85,15 @@ export function TierAvailabilityBadge({
   sold,
   quantity,
 }: TierAvailabilityBadgeProps) {
-  const now = Date.now();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const isSoldOut = sold >= quantity;
   const isNotStarted = saleStart && now < saleStart;
   const isExpired = saleEnd && now > saleEnd;

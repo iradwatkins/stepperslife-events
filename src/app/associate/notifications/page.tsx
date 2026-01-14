@@ -8,9 +8,18 @@ import { Bell, Calendar, CheckCircle, Trash2, TrendingUp } from "lucide-react";
 import { formatTime } from "@/lib/utils/time-formatting";
 import { getNotificationIcon } from "@/lib/utils/notification-helpers";
 
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  timestamp: number;
+  read: boolean;
+}
+
 export default function AssociateNotificationsPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
-  const notifications: any[] = [];
+  const notifications: Notification[] = [];
 
   return (
     <div className="p-6 space-y-6">
@@ -75,7 +84,7 @@ export default function AssociateNotificationsPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {notifications.map((notification: any) => (
+          {notifications.map((notification) => (
             <Card key={notification.id} className={notification.read ? "opacity-60" : ""}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">

@@ -218,7 +218,7 @@ export function canAccessRoleDashboard(
   if (user.role === role) return true;
 
   // Check staff roles
-  if (user.staffRoles && user.staffRoles.includes(role as any)) {
+  if (user.staffRoles && (user.staffRoles as string[]).includes(role)) {
     return true;
   }
 

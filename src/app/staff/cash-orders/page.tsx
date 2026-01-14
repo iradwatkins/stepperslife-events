@@ -5,10 +5,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
-  DollarSign,
   Clock,
   CheckCircle2,
-  XCircle,
   Key,
   AlertCircle,
   RefreshCw,
@@ -52,7 +50,8 @@ export default function CashOrdersPage() {
     orderId: Id<"orders">;
     code: string;
   } | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // Current time for calculating time remaining - updated on refresh
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   // Get staff positions (to select which event to view)
   const staffPositions = useQuery(api.staff.queries.getStaffDashboard);
@@ -67,9 +66,10 @@ export default function CashOrdersPage() {
   const approveCashOrder = useMutation(api.orders.cashPayments.approveCashOrder);
   const generateCode = useMutation(api.orders.cashPayments.generateCashActivationCode);
 
-  // Auto-select first event if available
+  // Auto-select first event if available - this pattern is intentional for default state on data load
   useEffect(() => {
     if (staffPositions && staffPositions.length > 0 && !selectedEventId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedEventId(staffPositions[0].event?._id as Id<"events">);
     }
   }, [staffPositions, selectedEventId]);
@@ -77,7 +77,7 @@ export default function CashOrdersPage() {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setRefreshKey((prev) => prev + 1);
+      setCurrentTime(Date.now());
     }, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -88,8 +88,8 @@ export default function CashOrdersPage() {
       setActivatingOrderId(orderId);
       await approveCashOrder({ orderId, staffId });
       setActivatingOrderId(null);
-    } catch (error: any) {
-      toast.error(`Failed to approve order: ${error.message}`);
+    } catch (error) {
+      toast.error(`Failed to approve order: ${error instanceof Error ? error.message : "Unknown error"}`);
       setActivatingOrderId(null);
     }
   };
@@ -107,15 +107,14 @@ export default function CashOrdersPage() {
         },
         5 * 60 * 1000
       );
-    } catch (error: any) {
-      toast.error(`Failed to generate code: ${error.message}`);
+    } catch (error) {
+      toast.error(`Failed to generate code: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
 
   // Calculate time remaining
   const getTimeRemaining = (holdExpiresAt: number) => {
-    const now = Date.now();
-    const diff = holdExpiresAt - now;
+    const diff = holdExpiresAt - currentTime;
 
     if (diff <= 0) return "Expired";
 
@@ -127,8 +126,7 @@ export default function CashOrdersPage() {
 
   // Get color based on time remaining
   const getTimeColor = (holdExpiresAt: number) => {
-    const now = Date.now();
-    const diff = holdExpiresAt - now;
+    const diff = holdExpiresAt - currentTime;
     const minutes = diff / 1000 / 60;
 
     if (minutes <= 5) return "text-destructive";
@@ -174,7 +172,7 @@ export default function CashOrdersPage() {
           </div>
           <button
             type="button"
-            onClick={() => setRefreshKey((prev) => prev + 1)}
+            onClick={() => setCurrentTime(Date.now())}
             className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition"
           >
             <RefreshCw className="w-4 h-4" />
@@ -209,7 +207,7 @@ export default function CashOrdersPage() {
               <ul className="list-disc list-inside space-y-1 text-foreground">
                 <li>Customers reserve tickets with a 30-minute hold</li>
                 <li>
-                  <strong>Instant Approval:</strong> Tap "Approve Order" after receiving cash
+                  <strong>Instant Approval:</strong> Tap &quot;Approve Order&quot; after receiving cash
                 </li>
                 <li>
                   <strong>Activation Code:</strong> Generate a 4-digit code for the customer to

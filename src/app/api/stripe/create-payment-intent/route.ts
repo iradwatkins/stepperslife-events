@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             console.warn("[Stripe] Failed to check organizer debt:", debtError);
           }
         }
-      } catch (convexError: any) {
+      } catch (convexError) {
         console.error("[Stripe Connect] Failed to fetch payment config:", convexError);
         return NextResponse.json(
           { error: "Failed to retrieve payment configuration" },
@@ -234,10 +234,10 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
       chargePattern: useDirectCharge ? "DIRECT" : "DESTINATION",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Payment Intent] Creation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to create payment intent" },
       { status: 500 }
     );
   }
@@ -270,10 +270,10 @@ export async function GET(request: NextRequest) {
       amount: paymentIntent.amount,
       metadata: paymentIntent.metadata,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Payment Intent] Retrieval error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to retrieve payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to retrieve payment intent" },
       { status: 500 }
     );
   }

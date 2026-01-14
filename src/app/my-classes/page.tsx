@@ -6,9 +6,6 @@ import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import {
   Calendar,
-  Ticket,
-  MapPin,
-  QrCode,
   Share2,
   Clock,
   CheckCircle,
@@ -20,12 +17,12 @@ import {
   ChevronUp,
   Check,
   User,
+  Ticket,
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { useState, useEffect } from "react";
-import { formatEventLocation } from "@/lib/location-format";
 import { toast } from "sonner";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
@@ -181,7 +178,8 @@ export default function MyClassesPage() {
     {} as Record<string, { event: NonNullable<TicketData["event"]>; tickets: TicketData[] }>
   );
 
-  const now = Date.now();
+  // Use useState with lazy initialization to capture time once on mount
+  const [now] = useState(() => Date.now());
 
   // Filter upcoming classes (exclude cancelled/refunded)
   const upcomingClasses = groupedTickets
@@ -287,7 +285,7 @@ export default function MyClassesPage() {
             </div>
             <div>
               <p className="font-medium text-foreground">Student View</p>
-              <p className="text-xs text-info">Classes you've enrolled in as a student</p>
+              <p className="text-xs text-info">Classes you&apos;ve enrolled in as a student</p>
             </div>
           </div>
 

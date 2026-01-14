@@ -171,7 +171,7 @@ export default function VariantsManager({
     });
   };
 
-  const updateEditedValue = (variantId: string, field: string, value: any) => {
+  const updateEditedValue = (variantId: string, field: string, value: string | number | undefined) => {
     setEditedValues({
       ...editedValues,
       [variantId]: {

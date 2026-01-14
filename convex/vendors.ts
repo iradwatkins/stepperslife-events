@@ -608,7 +608,12 @@ export const updateStripeAccountStatus = mutation({
     const vendor = await ctx.db.get(args.vendorId);
     if (!vendor) throw new Error("Vendor not found");
 
-    const updates: Record<string, any> = {
+    const updates: {
+      updatedAt: number;
+      stripeAccountSetupComplete?: boolean;
+      stripeCashAppEnabled?: boolean;
+      stripePayoutsEnabled?: boolean;
+    } = {
       updatedAt: Date.now(),
     };
 

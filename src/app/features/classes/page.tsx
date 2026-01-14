@@ -6,13 +6,11 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { format } from "date-fns";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
 import {
   BookOpen,
   Users,
-  DollarSign,
   Calendar,
   Bell,
   MapPin,
@@ -22,15 +20,31 @@ import {
   ArrowRight,
   CheckCircle2,
   Play,
-  Sparkles,
   TrendingUp,
-  Heart,
   Repeat,
   CreditCard,
   BarChart3,
   MessageSquare,
-  Zap,
 } from "lucide-react";
+
+// Pre-computed deterministic values for floating musical notes (avoids Math.random() during render)
+const MUSICAL_NOTE_POSITIONS = [
+  { left: 12, top: 8, duration: 4.3, delay: 0.2 },
+  { left: 87, top: 15, duration: 5.1, delay: 1.4 },
+  { left: 23, top: 72, duration: 4.8, delay: 0.7 },
+  { left: 65, top: 34, duration: 5.5, delay: 1.9 },
+  { left: 41, top: 89, duration: 4.2, delay: 0.4 },
+  { left: 78, top: 56, duration: 5.8, delay: 1.1 },
+  { left: 9, top: 45, duration: 4.6, delay: 1.6 },
+  { left: 54, top: 23, duration: 5.3, delay: 0.9 },
+  { left: 92, top: 67, duration: 4.1, delay: 0.1 },
+  { left: 36, top: 11, duration: 5.7, delay: 1.3 },
+  { left: 71, top: 82, duration: 4.4, delay: 0.6 },
+  { left: 18, top: 39, duration: 5.2, delay: 1.8 },
+  { left: 83, top: 94, duration: 4.9, delay: 0.3 },
+  { left: 47, top: 58, duration: 5.4, delay: 1.5 },
+  { left: 61, top: 76, duration: 4.7, delay: 0.8 },
+];
 
 export default function ClassesFeaturesPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,13 +107,13 @@ export default function ClassesFeaturesPage() {
         </div>
 
         {/* Floating Musical Notes */}
-        {[...Array(15)].map((_, i) => (
+        {MUSICAL_NOTE_POSITIONS.map((note, i) => (
           <motion.div
             key={i}
             className="absolute text-white/20 text-4xl"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${note.left}%`,
+              top: `${note.top}%`,
             }}
             animate={{
               y: [0, -50, 0],
@@ -107,9 +121,9 @@ export default function ClassesFeaturesPage() {
               opacity: [0.2, 0.4, 0.2],
             }}
             transition={{
-              duration: 4 + Math.random() * 2,
+              duration: note.duration,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: note.delay,
             }}
           >
             ♪

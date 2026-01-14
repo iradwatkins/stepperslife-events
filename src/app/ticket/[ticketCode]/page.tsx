@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
@@ -10,7 +11,6 @@ import {
   CheckCircle,
   XCircle,
   ArrowLeft,
-  Ticket,
   Clock,
   Armchair,
 } from "lucide-react";
@@ -20,6 +20,11 @@ import { QRCodeSVG } from "qrcode.react";
 export default function TicketValidationPage() {
   const params = useParams();
   const ticketCode = params.ticketCode as string;
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   const ticketData = useQuery(api.tickets.queries.getTicketByCode, {
     ticketCode: ticketCode,
@@ -66,7 +71,7 @@ export default function TicketValidationPage() {
 
   const { ticket, event, tier, order, attendee, seat } = ticketData;
   const isValid = ticket.status === "VALID";
-  const isUpcoming = event.startDate && event.startDate >= Date.now();
+  const isUpcoming = event.startDate && now !== null && event.startDate >= now;
 
   return (
     <div className="min-h-screen bg-primary">

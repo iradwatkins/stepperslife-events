@@ -17,6 +17,16 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+
+interface UserWithStats {
+  _id: Id<"users">;
+  name?: string;
+  email: string;
+  role?: "admin" | "organizer" | "user";
+  createdAt?: number;
+  eventCount?: number;
+  orderCount?: number;
+}
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -242,11 +252,11 @@ export default function UsersManagementPage() {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    <span>{(user as any).eventCount || 0} events</span>
+                    <span>{(user as UserWithStats).eventCount || 0} events</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <ShoppingCart className="w-4 h-4" />
-                    <span>{(user as any).orderCount || 0} orders</span>
+                    <span>{(user as UserWithStats).orderCount || 0} orders</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
@@ -348,11 +358,11 @@ export default function UsersManagementPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{(user as any).eventCount || 0}</span>
+                            <span>{(user as UserWithStats).eventCount || 0}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <ShoppingCart className="w-4 h-4" />
-                            <span>{(user as any).orderCount || 0}</span>
+                            <span>{(user as UserWithStats).orderCount || 0}</span>
                           </div>
                         </div>
                       </td>

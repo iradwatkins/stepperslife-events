@@ -17,8 +17,11 @@ import {
 import { motion } from "framer-motion";
 import { formatEventDate } from "@/lib/date-format";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useState } from "react";
 
 export default function InstructorDashboardPage() {
+  // Use useState with lazy initialization to capture time once on mount
+  const [now] = useState(() => Date.now());
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const classes = useQuery(
     api.events.queries.getOrganizerClasses,
@@ -35,7 +38,7 @@ export default function InstructorDashboardPage() {
 
   // Get upcoming classes
   const upcomingClasses =
-    classes?.filter((classItem) => classItem.startDate && classItem.startDate > Date.now()).slice(0, 3) || [];
+    classes?.filter((classItem) => classItem.startDate && classItem.startDate > now).slice(0, 3) || [];
 
   // Get recent classes
   const recentClasses = classes?.slice(0, 5) || [];

@@ -2,8 +2,7 @@ import { v } from "convex/values";
 import { mutation, internalMutation, action, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { parseEventDateTime } from "../lib/timezone";
-import { USER_ROLES, PRIMARY_ADMIN_EMAIL } from "../lib/roles";
-import { PermissionChecker, requireAdmin } from "../lib/permissions";
+import { requireAdmin } from "../lib/permissions";
 import { requireAdmin as requireAdminAuth } from "../lib/auth";
 
 /**

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { getCurrentUser } from "./lib/auth";
+import { Id } from "./_generated/dataModel";
 import { getMyRestaurants, getRestaurantAccess } from "./lib/restaurantAuth";
+import { getCurrentUser } from "./lib/auth";
 
 /**
  * Get recent activity for user's restaurants
@@ -13,11 +14,12 @@ export const getRecentActivity = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
+    // Ensure user is authenticated
+    await getCurrentUser(ctx);
     const limit = args.limit || 20;
 
     // Get restaurants the user has access to
-    let restaurantIds: string[] = [];
+    let restaurantIds: Id<"restaurants">[] = [];
 
     if (args.restaurantId) {
       // Verify user has access to this restaurant
@@ -49,12 +51,12 @@ export const getRecentActivity = query({
 
     // Fetch recent orders (last 24 hours or most recent 10)
     for (const restaurantId of restaurantIds) {
-      const restaurant = await ctx.db.get(restaurantId as any) as { name?: string } | null;
+      const restaurant = await ctx.db.get(restaurantId);
 
       // Get recent orders
       const orders = await ctx.db
         .query("foodOrders")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .order("desc")
         .take(10);
 
@@ -78,7 +80,7 @@ export const getRecentActivity = query({
       // Get recent reviews
       const reviews = await ctx.db
         .query("restaurantReviews")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .order("desc")
         .take(5);
 
@@ -104,7 +106,7 @@ export const getRecentActivity = query({
       // Get recent staff changes
       const staffChanges = await ctx.db
         .query("restaurantStaff")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .order("desc")
         .take(5);
 
@@ -147,10 +149,11 @@ export const getOrderStats = query({
     restaurantId: v.optional(v.id("restaurants")),
   },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
+    // Ensure user is authenticated
+    await getCurrentUser(ctx);
 
     // Get restaurants the user has access to
-    let restaurantIds: string[] = [];
+    let restaurantIds: Id<"restaurants">[] = [];
 
     if (args.restaurantId) {
       const access = await getRestaurantAccess(ctx, args.restaurantId);
@@ -172,7 +175,6 @@ export const getOrderStats = query({
       };
     }
 
-    const now = Date.now();
     const todayStart = new Date().setHours(0, 0, 0, 0);
 
     let pendingOrders = 0;
@@ -185,7 +187,7 @@ export const getOrderStats = query({
       // Count pending orders
       const pending = await ctx.db
         .query("foodOrders")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .filter((q) =>
           q.or(
             q.eq(q.field("status"), "PENDING"),
@@ -199,7 +201,7 @@ export const getOrderStats = query({
       // Count today's orders
       const today = await ctx.db
         .query("foodOrders")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .filter((q) => q.gte(q.field("placedAt"), todayStart))
         .collect();
       todayOrders += today.length;
@@ -208,7 +210,7 @@ export const getOrderStats = query({
       // Get average rating
       const reviews = await ctx.db
         .query("restaurantReviews")
-        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId as any))
+        .withIndex("by_restaurant", (q) => q.eq("restaurantId", restaurantId))
         .collect();
       totalRating += reviews.reduce((sum, review) => sum + review.rating, 0);
       reviewCount += reviews.length;

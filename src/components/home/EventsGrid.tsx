@@ -7,7 +7,7 @@ import { Calendar, MapPin, Tag, ChevronLeft, ChevronRight, CalendarDays, Hotel }
 import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
-interface Event {
+export interface EventGridItem {
   _id: string;
   name: string;
   description: string;
@@ -25,6 +25,9 @@ interface Event {
   hasHotels?: boolean;
   hotelCount?: number;
 }
+
+// Alias for internal use
+type Event = EventGridItem;
 
 interface EventsGridProps {
   events: Event[];

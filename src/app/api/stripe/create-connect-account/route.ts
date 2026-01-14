@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         stripeConnectedAccountId: account.id,
       });
 
-    } catch (convexError: any) {
+    } catch (convexError) {
       console.error("[Stripe Connect] Failed to save to Convex:", convexError);
       // Don't fail the request - account was created, they can retry onboarding
     }
@@ -97,10 +97,10 @@ export async function POST(request: NextRequest) {
       accountId: account.id,
       accountLinkUrl: accountLink.url,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Connect] Account creation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create Stripe Connect account" },
+      { error: error instanceof Error ? error.message : "Failed to create Stripe Connect account" },
       { status: 500 }
     );
   }
@@ -140,10 +140,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       accountLinkUrl: accountLink.url,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Connect] Account link creation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create account link" },
+      { error: error instanceof Error ? error.message : "Failed to create account link" },
       { status: 500 }
     );
   }

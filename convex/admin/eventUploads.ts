@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { requireAdmin } from "../lib/auth";
-import { Id } from "../_generated/dataModel";
 
 /**
  * Admin Event/Class Upload Mutations

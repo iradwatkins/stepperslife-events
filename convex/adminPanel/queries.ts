@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "../_generated/server";
 import { requireAdmin } from "../lib/permissions";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
 
 /**
  * Admin queries - requires admin role

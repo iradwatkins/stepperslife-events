@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Hotel,
-  UserCheck,
   CreditCard,
   Calendar,
   MapPin,
@@ -66,19 +65,8 @@ const AMENITY_LABELS: Record<string, string> = {
   restaurant: "Restaurant",
 };
 
-interface RoomType {
-  id: string;
-  name: string;
-  pricePerNightCents: number;
-  quantity: number;
-  sold: number;
-  maxGuests: number;
-  description?: string;
-}
-
 export default function HotelBookingPage() {
   const params = useParams();
-  const router = useRouter();
   const eventId = params.eventId as Id<"events">;
 
   // Queries
@@ -129,18 +117,25 @@ export default function HotelBookingPage() {
       : "skip"
   );
 
-  // Initialize dates and user info
+  // Initialize dates when hotel is selected
   useEffect(() => {
     if (selectedHotel && !checkInDate) {
-      setCheckInDate(format(new Date(selectedHotel.checkInDate), "yyyy-MM-dd"));
-      setCheckOutDate(format(new Date(selectedHotel.checkOutDate), "yyyy-MM-dd"));
+      // Use queueMicrotask to avoid synchronous setState during render
+      queueMicrotask(() => {
+        setCheckInDate(format(new Date(selectedHotel.checkInDate), "yyyy-MM-dd"));
+        setCheckOutDate(format(new Date(selectedHotel.checkOutDate), "yyyy-MM-dd"));
+      });
     }
   }, [selectedHotel, checkInDate]);
 
+  // Pre-fill user info when available
   useEffect(() => {
     if (currentUser) {
-      setGuestName(currentUser.name || "");
-      setGuestEmail(currentUser.email || "");
+      // Use queueMicrotask to avoid synchronous setState during render
+      queueMicrotask(() => {
+        setGuestName(currentUser.name || "");
+        setGuestEmail(currentUser.email || "");
+      });
     }
   }, [currentUser]);
 
@@ -218,8 +213,8 @@ export default function HotelBookingPage() {
 
       setReservationId(result.reservationId);
       setConfirmationNumber(result.confirmationNumber);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create reservation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create reservation");
       setIsProcessing(false);
     }
   };
@@ -236,8 +231,8 @@ export default function HotelBookingPage() {
       });
 
       setIsSuccess(true);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to confirm reservation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to confirm reservation");
     }
   };
 
@@ -328,7 +323,6 @@ export default function HotelBookingPage() {
             <div className="space-y-6">
               {hotelPackages.map((hotel) => {
                 const isSelected = selectedHotelId === hotel._id;
-                const hasAvailability = hotel.roomTypes.some((rt) => rt.quantity - rt.sold > 0);
                 const nights = Math.ceil(
                   (hotel.checkOutDate - hotel.checkInDate) / (1000 * 60 * 60 * 24)
                 );
@@ -823,7 +817,7 @@ export default function HotelBookingPage() {
                   connectedAccountId=""
                   platformFee={availability.platformFeeCents ?? 0}
                   orderId={reservationId}
-                  orderNumber={`HOTEL-${Date.now()}`}
+                  orderNumber={`HOTEL-${reservationId}`}
                   billingContact={{
                     givenName: guestName.split(" ")[0],
                     familyName: guestName.split(" ").slice(1).join(" "),

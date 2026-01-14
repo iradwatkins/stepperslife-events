@@ -147,11 +147,12 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
       setTimeout(() => {
         onDataExtracted(formData);
       }, 800);
-    } catch (error: any) {
+    } catch (error) {
       console.error("[FlyerUploadHero] Error:", error);
       setPhase("error");
-      setErrorMessage(error.message || "Failed to scan flyer. Please try again.");
-      onError?.(error.message || "Failed to scan flyer. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to scan flyer. Please try again.";
+      setErrorMessage(errorMessage);
+      onError?.(errorMessage);
     }
   }, [generateUploadUrl, onDataExtracted, onError]);
 

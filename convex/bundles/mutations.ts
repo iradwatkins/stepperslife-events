@@ -122,7 +122,7 @@ export const createTicketBundle = mutation({
 
       // For multi-event bundles, verify tier belongs to one of the events
       if (bundleType === "MULTI_EVENT") {
-        const tierWithEvent = includedTier as any;
+        const tierWithEvent = includedTier as { tierId: typeof includedTier.tierId; tierName: string; quantity: number; eventId: string; eventName: string };
         if (tier.eventId !== tierWithEvent.eventId) {
           throw new Error(
             `Ticket tier ${includedTier.tierName} does not belong to event ${tierWithEvent.eventName}`

@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
           pricePerTicket: pricePerTicket,
           stripePaymentIntentId: paymentIntent.id,
         });
-      } catch (convexError: any) {
+      } catch (convexError) {
         console.error("[Stripe Platform] Failed to create pending credit purchase:", convexError);
         // Don't fail the payment intent creation, just log the error
         // The webhook will handle the final confirmation
@@ -186,10 +186,10 @@ export async function POST(request: NextRequest) {
       productType: productType,
       chargeType: "PLATFORM",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Platform Payment] Creation error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to create payment intent" },
       { status: 500 }
     );
   }
@@ -247,10 +247,10 @@ export async function GET(request: NextRequest) {
       productType: paymentIntent.metadata?.productType,
       metadata: paymentIntent.metadata,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Platform Payment] Retrieval error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to retrieve payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to retrieve payment intent" },
       { status: 500 }
     );
   }

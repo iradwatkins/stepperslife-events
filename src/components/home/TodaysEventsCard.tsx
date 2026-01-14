@@ -109,10 +109,12 @@ export function TodaysEventsCard() {
                 </div>
               )}
               {/* Time Badge */}
-              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatTime(event.startDate)}
-              </div>
+              {event.startDate && (
+                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {formatTime(event.startDate)}
+                </div>
+              )}
             </div>
 
             {/* Event Info */}
@@ -120,12 +122,12 @@ export function TodaysEventsCard() {
               <h3 className="font-semibold text-sm md:text-base line-clamp-1 text-foreground">
                 {event.name}
               </h3>
-              {(event.venue || event.location) && (
+              {event.location && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1 line-clamp-1">
                   <MapPin className="w-3 h-3 flex-shrink-0" />
-                  {event.venue || (typeof event.location === 'string'
+                  {typeof event.location === 'string'
                     ? event.location
-                    : event.location && [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', '))}
+                    : [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', ')}
                 </p>
               )}
 

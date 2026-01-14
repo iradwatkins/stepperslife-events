@@ -1,10 +1,9 @@
 import { v } from "convex/values";
-import { mutation, internalMutation } from "../_generated/server";
+import { mutation, internalMutation, MutationCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 import { getCurrentUser, requireEventOwnership, requireAdmin } from "../lib/auth";
 import { internal } from "../_generated/api";
-import { getTimestamps, getUpdateTimestamp } from "../lib/helpers";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
+import { getTimestamps } from "../lib/helpers";
 
 /**
  * Create a new event
@@ -368,7 +367,7 @@ export const createEventOnBehalfOf = mutation({
   },
   handler: async (ctx, args) => {
     // Require admin role
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx);
     console.log("[createEventOnBehalfOf] Admin creating event for owner:", args.ownerId);
 
     // Get the specified owner
@@ -492,7 +491,7 @@ export const createEventOnBehalfOf = mutation({
  * This maintains the full hierarchy tree
  */
 async function autoAssignSubSellers(
-  ctx: any,
+  ctx: MutationCtx,
   originalParentStaffId: Id<"eventStaff">,
   newParentStaffId: Id<"eventStaff">,
   eventId: Id<"events">,
@@ -501,8 +500,8 @@ async function autoAssignSubSellers(
   // Find all sub-sellers of the original parent staff that have autoAssignToNewEvents=true
   const subSellers = await ctx.db
     .query("eventStaff")
-    .withIndex("by_assigned_by", (q: any) => q.eq("assignedByStaffId", originalParentStaffId))
-    .filter((q: any) =>
+    .withIndex("by_assigned_by", (q) => q.eq("assignedByStaffId", originalParentStaffId))
+    .filter((q) =>
       q.and(q.eq(q.field("isActive"), true), q.eq(q.field("autoAssignToNewEvents"), true))
     )
     .collect();
@@ -520,7 +519,7 @@ async function autoAssignSubSellers(
     while (attempts < 10) {
       const existing = await ctx.db
         .query("eventStaff")
-        .withIndex("by_referral_code", (q: any) => q.eq("referralCode", referralCode))
+        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
         .first();
       if (!existing) break;
       referralCode = `${namePart}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -581,7 +580,7 @@ export const configurePayment = mutation({
     // PRODUCTION: Require authentication and event ownership
     const ownership = await requireEventOwnership(ctx, args.eventId);
     const user = ownership.user;
-    const event = ownership.event;
+    // ownership.event available if needed in the future
 
     // Check if config already exists
     const existing = await ctx.db
@@ -614,7 +613,7 @@ export const configurePayment = mutation({
     }
 
     // Determine customer payment methods based on connected accounts
-    let customerPaymentMethods: ("CASH" | "STRIPE" | "PAYPAL")[] = ["CASH"]; // Cash always available
+    const customerPaymentMethods: ("CASH" | "STRIPE" | "PAYPAL")[] = ["CASH"]; // Cash always available
     if (args.model === "CREDIT_CARD") {
       if (user.stripeConnectedAccountId) {
         customerPaymentMethods.push("STRIPE");
@@ -904,9 +903,8 @@ export const updateEventStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    // Verify event ownership
-    const { event } = await requireEventOwnership(ctx, args.eventId);
-
+    // Verify event ownership (validates user owns this event)
+    await requireEventOwnership(ctx, args.eventId);
 
     // Update event status
     await ctx.db.patch(args.eventId, {
@@ -921,7 +919,7 @@ export const updateEventStatus = mutation({
         await ctx.scheduler.runAfter(0, internal.events.allocations.expireFirstEventCredits, {
           eventId: args.eventId,
         });
-      } catch (error) {
+      } catch {
         // Don't fail the status update if credit expiration fails - error logged internally
       }
     }
@@ -1000,7 +998,7 @@ export const duplicateEvent = mutation({
   },
   handler: async (ctx, args) => {
     // Verify event ownership
-    const { user, event: originalEvent } = await requireEventOwnership(ctx, args.eventId);
+    const { event: originalEvent } = await requireEventOwnership(ctx, args.eventId);
 
     // Create new event with duplicated data
     const newEventData = {
@@ -1044,7 +1042,7 @@ export const duplicateEvent = mutation({
           updatedAt: Date.now(),
         };
 
-        const newTierId = await ctx.db.insert("ticketTiers", newTierData);
+        await ctx.db.insert("ticketTiers", newTierData);
       }
     }
 
@@ -1065,15 +1063,8 @@ export const duplicateEvent = mutation({
           updatedAt: Date.now(),
         };
 
-        const newChartId = await ctx.db.insert("seatingCharts", newChartData);
-
-        // Copy all seat reservations for this chart
-        const reservations = await ctx.db
-          .query("seatReservations")
-          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-          .collect();
-
-        // Note: We're not copying seat reservations as they should start fresh for the new event
+        await ctx.db.insert("seatingCharts", newChartData);
+        // Note: Seat reservations are not copied as they should start fresh for the new event
       }
     }
 
@@ -1098,7 +1089,7 @@ export const duplicateEvent = mutation({
           updatedAt: Date.now(),
         };
 
-        const newStaffId = await ctx.db.insert("eventStaff", newStaffData);
+        await ctx.db.insert("eventStaff", newStaffData);
       }
     }
 
@@ -1144,8 +1135,8 @@ export const bulkDeleteEvents = mutation({
   },
   handler: async (ctx, args) => {
 
-    // Get authenticated user
-    const user = await getCurrentUser(ctx);
+    // Get authenticated user - ensures user is logged in
+    await getCurrentUser(ctx);
 
     const deletedEvents: string[] = [];
     const failedEvents: Array<{ eventId: string; reason: string }> = [];
@@ -1154,14 +1145,12 @@ export const bulkDeleteEvents = mutation({
     for (const eventId of args.eventIds) {
       try {
         // Verify ownership (handles both organizers and admins)
-        let event;
         try {
-          const ownership = await requireEventOwnership(ctx, eventId);
-          event = ownership.event;
-        } catch (error) {
+          await requireEventOwnership(ctx, eventId);
+        } catch (err) {
           failedEvents.push({
             eventId,
-            reason: error instanceof Error ? error.message : "Not authorized to delete this event",
+            reason: err instanceof Error ? err.message : "Not authorized to delete this event",
           });
           continue;
         }
@@ -1569,8 +1558,8 @@ export const bulkPublishEvents = mutation({
     eventIds: v.array(v.id("events")),
   },
   handler: async (ctx, args) => {
-    // Get authenticated user
-    const user = await getCurrentUser(ctx);
+    // Get authenticated user - ensures user is logged in
+    await getCurrentUser(ctx);
 
     const publishedEvents: string[] = [];
     const failedEvents: Array<{ eventId: string; reason: string }> = [];
@@ -1582,10 +1571,10 @@ export const bulkPublishEvents = mutation({
         try {
           const ownership = await requireEventOwnership(ctx, eventId);
           event = ownership.event;
-        } catch (error) {
+        } catch (err) {
           failedEvents.push({
             eventId,
-            reason: error instanceof Error ? error.message : "Not authorized to publish this event",
+            reason: err instanceof Error ? err.message : "Not authorized to publish this event",
           });
           continue;
         }
@@ -1645,8 +1634,8 @@ export const bulkUnpublishEvents = mutation({
     eventIds: v.array(v.id("events")),
   },
   handler: async (ctx, args) => {
-    // Get authenticated user
-    const user = await getCurrentUser(ctx);
+    // Get authenticated user - ensures user is logged in
+    await getCurrentUser(ctx);
 
     const unpublishedEvents: string[] = [];
     const failedEvents: Array<{ eventId: string; reason: string }> = [];
@@ -1658,10 +1647,10 @@ export const bulkUnpublishEvents = mutation({
         try {
           const ownership = await requireEventOwnership(ctx, eventId);
           event = ownership.event;
-        } catch (error) {
+        } catch (err) {
           failedEvents.push({
             eventId,
-            reason: error instanceof Error ? error.message : "Not authorized to unpublish this event",
+            reason: err instanceof Error ? err.message : "Not authorized to unpublish this event",
           });
           continue;
         }

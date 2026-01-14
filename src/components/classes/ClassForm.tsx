@@ -439,9 +439,9 @@ export default function ClassForm({ mode, classId }: ClassFormProps) {
         await updateEvent(updateData);
         router.push("/instructor/classes?updated=true");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("[ClassForm] Error saving class:", error);
-      toast.error(error.message || "Failed to save class. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to save class. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

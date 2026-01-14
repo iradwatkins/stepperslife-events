@@ -1,4 +1,5 @@
 import { mutation } from "../_generated/server";
+import { TableNames } from "../_generated/dataModel";
 
 /**
  * Reset All Data EXCEPT Users
@@ -67,7 +68,7 @@ export const resetExceptUsers = mutation({
 
     for (const tableName of tablesToReset) {
       try {
-        const documents = await ctx.db.query(tableName as any).collect();
+        const documents = await ctx.db.query(tableName as TableNames).collect();
         deletionCount[tableName] = 0;
 
         for (const doc of documents) {
@@ -75,7 +76,7 @@ export const resetExceptUsers = mutation({
           deletionCount[tableName]++;
           totalDeleted++;
         }
-      } catch (error: any) {
+      } catch {
         // Table might not exist - skip silently
         deletionCount[tableName] = -1;
       }
@@ -123,7 +124,7 @@ export const verifyResetExceptUsers = mutation({
 
     for (const tableName of tables) {
       try {
-        const count = (await ctx.db.query(tableName as any).collect()).length;
+        const count = (await ctx.db.query(tableName as TableNames).collect()).length;
         results[tableName] = count;
         dataRecords += count;
       } catch {

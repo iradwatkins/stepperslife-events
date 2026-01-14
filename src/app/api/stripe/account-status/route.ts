@@ -62,11 +62,12 @@ export async function GET(request: NextRequest) {
         transfers: account.capabilities?.transfers,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const stripeError = error as Error & { code?: string };
     console.error("[Stripe Connect] Account status error:", error);
 
     // Check if account doesn't exist
-    if (error.code === "resource_missing") {
+    if (stripeError.code === "resource_missing") {
       return NextResponse.json(
         { error: "Stripe account not found" },
         { status: 404 }
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || "Failed to retrieve account status" },
+      { error: stripeError.message || "Failed to retrieve account status" },
       { status: 500 }
     );
   }

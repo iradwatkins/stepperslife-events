@@ -1,6 +1,6 @@
-import { internalMutation, mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { ADMIN_EMAILS, isAdminEmail } from "../lib/roles";
+import { ADMIN_EMAILS } from "../lib/roles";
 
 /**
  * Internal mutation to bulk delete users

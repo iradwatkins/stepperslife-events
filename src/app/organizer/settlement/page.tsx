@@ -48,16 +48,16 @@ export default function SettlementDashboard() {
   const handleMarkPaid = async (staffId: Id<"eventStaff">) => {
     try {
       await markPaid({ staffId });
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark as paid");
     }
   };
 
   const handleMarkPending = async (staffId: Id<"eventStaff">) => {
     try {
       await markPending({ staffId });
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to mark as pending");
     }
   };
 

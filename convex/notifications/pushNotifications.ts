@@ -187,7 +187,7 @@ export const sendToStaff = internalMutation({
         });
 
         sentCount++;
-      } catch (error: any) {
+      } catch (error) {
         console.error(`[sendToStaff] Failed to send to subscription ${sub._id}:`, error);
 
         // Log failed notification
@@ -199,7 +199,7 @@ export const sendToStaff = internalMutation({
           orderId: args.orderId,
           eventId: args.eventId,
           status: "FAILED",
-          error: error.message,
+          error: error instanceof Error ? error.message : "Unknown error",
           sentAt: now,
         });
 

@@ -6,7 +6,6 @@
  */
 
 import { internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
 
 /**
  * Migrate all legacy staff roles to new role names
@@ -36,7 +35,7 @@ export const migrateStaffRoles = internalMutation({
 
       if (newRole) {
         await ctx.db.patch(staff._id, {
-          role: newRole as any,
+          role: newRole as "STAFF" | "TEAM_MEMBERS" | "ASSOCIATES" | "MANAGER" | "SELLER",
         });
         migratedCount++;
       }

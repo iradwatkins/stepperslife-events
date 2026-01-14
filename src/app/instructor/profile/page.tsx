@@ -4,10 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import {
-  User,
   Mail,
-  Phone,
-  MapPin,
   Calendar,
   GraduationCap,
   BookOpen,
@@ -18,8 +15,11 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useState } from "react";
 
 export default function InstructorProfilePage() {
+  // Use useState with lazy initialization to capture year once on mount
+  const [currentYear] = useState(() => new Date().getFullYear());
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const classes = useQuery(
     api.events.queries.getOrganizerClasses,
@@ -91,7 +91,7 @@ export default function InstructorProfilePage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Member since {new Date(currentUser?._creationTime || Date.now()).getFullYear()}
+                  Member since {new Date(currentUser?._creationTime || 0).getFullYear() || currentYear}
                 </span>
               </div>
             </div>

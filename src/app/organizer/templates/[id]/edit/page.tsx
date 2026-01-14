@@ -6,7 +6,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import TemplateBuilder from "@/components/template-builder/TemplateBuilder";
 import { sectionsToCanvasItems } from "@/components/template-builder/converters";
-import { useState, useEffect } from "react";
+import { GeneratedSection } from "@/components/template-builder/utils";
+import { useState, useMemo } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -25,25 +26,28 @@ export default function EditTemplatePage() {
   const updateTemplate = useMutation(api.templates.mutations.updateRoomTemplate);
 
   // Convert sections to canvas items once template is loaded
-  const [initialItems, setInitialItems] = useState<any[]>([]);
-  const [isConverted, setIsConverted] = useState(false);
-
-  useEffect(() => {
-    if (template && !isConverted) {
-      try {
-        const canvasItems = sectionsToCanvasItems(template.sections || []);
-        setInitialItems(canvasItems);
-        setIsConverted(true);
-      } catch (error) {
-        console.error("Failed to convert template sections:", error);
-        toast.error("Failed to load template layout. Starting with empty canvas.");
-        setIsConverted(true);
-      }
+  const { initialItems, conversionError } = useMemo(() => {
+    if (!template) {
+      return { initialItems: [], conversionError: false };
     }
-  }, [template, isConverted]);
+    try {
+      const canvasItems = sectionsToCanvasItems(template.sections || []);
+      return { initialItems: canvasItems, conversionError: false };
+    } catch (error) {
+      console.error("Failed to convert template sections:", error);
+      return { initialItems: [], conversionError: true };
+    }
+  }, [template]);
+
+  // Show toast for conversion error (separate from useMemo to avoid side effects)
+  const [hasShownError, setHasShownError] = useState(false);
+  if (conversionError && !hasShownError) {
+    toast.error("Failed to load template layout. Starting with empty canvas.");
+    setHasShownError(true);
+  }
 
   // Handle save
-  const handleSave = async (sections: any[], totalCapacity: number) => {
+  const handleSave = async (sections: GeneratedSection[], totalCapacity: number) => {
     if (!template) return;
 
     try {
@@ -67,9 +71,9 @@ export default function EditTemplatePage() {
       });
 
       router.push("/organizer/templates");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to update template:", error);
-      toast.error(error.message || "Failed to update template. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to update template. Please try again.");
     }
   };
 
@@ -114,7 +118,7 @@ export default function EditTemplatePage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Template Not Found</h1>
           <p className="text-muted-foreground mb-6">
-            The template you're looking for doesn't exist or you don't have permission to edit it.
+            The template you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to edit it.
           </p>
           <Link
             href="/organizer/templates"
@@ -123,18 +127,6 @@ export default function EditTemplatePage() {
             <ArrowLeft className="w-5 h-5" />
             Back to Templates
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Wait for conversion to complete
-  if (!isConverted) {
-    return (
-      <div className="min-h-screen bg-card flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground font-medium">Preparing editor...</p>
         </div>
       </div>
     );

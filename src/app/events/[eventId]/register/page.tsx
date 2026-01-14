@@ -33,7 +33,7 @@ export default function FreeEventRegisterPage() {
   const [attendeeEmail, setAttendeeEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [registrationData, setRegistrationData] = useState<{ ticketCode: string } | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
   const eventDetails = useQuery(api.public.queries.getPublicEventDetails, { eventId });
@@ -72,9 +72,9 @@ export default function FreeEventRegisterPage() {
 
       setRegistrationData(result);
       setIsSuccess(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error);
-      toast.error(error.message || "Failed to register. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to register. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

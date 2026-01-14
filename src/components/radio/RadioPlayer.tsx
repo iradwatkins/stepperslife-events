@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRadioPlayerSafe, RadioStation } from "./RadioPlayerContext";
@@ -46,6 +46,7 @@ export function RadioPlayer() {
   // Poll for now-playing info when a station is selected
   useEffect(() => {
     if (!player?.currentStation?.slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional cleanup when station changes
       setNowPlaying(null);
       return;
     }

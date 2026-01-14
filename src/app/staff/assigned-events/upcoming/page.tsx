@@ -3,11 +3,10 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MapPin, Clock, Users, Loader2 } from "lucide-react";
+import { Calendar, Clock, Users, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function UpcomingEventsPage() {
-  const currentUser = useQuery(api.users.queries.getCurrentUser);
   const staffEvents = useQuery(api.staff.queries.getStaffEvents);
 
   // Filter for upcoming events (after today)

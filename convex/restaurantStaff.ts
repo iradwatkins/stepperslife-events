@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
-import { api, internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 import { getCurrentUser } from "./lib/auth";
 import { requireRestaurantRole, requireRestaurantOwner, getMyRestaurants } from "./lib/restaurantAuth";
 import { validateEmail, validateRequiredString, validatePhoneNumber } from "./lib/validation";

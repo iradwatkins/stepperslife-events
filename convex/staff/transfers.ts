@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { Doc } from "../_generated/dataModel";
 import { TRANSFER_STATUS, TRANSFER_CONFIG } from "../lib/roles";
 
 /**
@@ -334,7 +335,8 @@ export const getMyTransfers = query({
 
     const staffIds = staffRecords.map((s) => s._id);
 
-    let transfers: any[] = [];
+    type TransferWithDirection = Doc<"staffTicketTransfers"> & { direction: "sent" | "received" };
+    let transfers: TransferWithDirection[] = [];
 
     // Get sent transfers
     if (args.type !== "received") {
@@ -344,7 +346,7 @@ export const getMyTransfers = query({
           .withIndex("by_from_staff", (q) => q.eq("fromStaffId", staffId))
           .collect();
 
-        transfers.push(...sentTransfers.map((t) => ({ ...t, direction: "sent" })));
+        transfers.push(...sentTransfers.map((t) => ({ ...t, direction: "sent" as const })));
       }
     }
 
@@ -356,7 +358,7 @@ export const getMyTransfers = query({
           .withIndex("by_to_staff", (q) => q.eq("toStaffId", staffId))
           .collect();
 
-        transfers.push(...receivedTransfers.map((t) => ({ ...t, direction: "received" })));
+        transfers.push(...receivedTransfers.map((t) => ({ ...t, direction: "received" as const })));
       }
     }
 

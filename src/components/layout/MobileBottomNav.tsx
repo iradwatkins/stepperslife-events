@@ -2,11 +2,16 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Calendar, ShoppingBag, Utensils, User, Ticket, Settings, LogIn, LayoutDashboard, Shield, Users } from "lucide-react";
+import { Home, Calendar, ShoppingBag, Utensils, User, Ticket, Settings, LogIn, LayoutDashboard, Shield, Users, LucideIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+// User type for auth context
+interface AuthUserWithRole {
+  role?: "admin" | "vendor" | "restaurateur" | "staff" | "team" | "associate" | "organizer" | "user";
+}
+
 // Helper to determine the best account route based on user role
-function getAccountRoute(user: any): string {
+function getAccountRoute(user: AuthUserWithRole | null): string {
   if (!user) return "/login";
 
   // Check role and return appropriate dashboard
@@ -32,7 +37,7 @@ function getAccountRoute(user: any): string {
 }
 
 // Helper to get context-aware label for Account button
-function getAccountLabel(user: any): string {
+function getAccountLabel(user: AuthUserWithRole | null): string {
   if (!user) return "Sign In";
 
   switch (user.role) {
@@ -56,7 +61,7 @@ function getAccountLabel(user: any): string {
 }
 
 // Helper to get the appropriate icon for account based on role
-function getAccountIcon(user: any) {
+function getAccountIcon(user: AuthUserWithRole | null): LucideIcon {
   if (!user) return LogIn;
 
   switch (user.role) {

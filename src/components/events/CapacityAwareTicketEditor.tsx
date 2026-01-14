@@ -78,7 +78,7 @@ export function CapacityAwareTicketEditor({
     setExpandedTiers(newExpanded);
   };
 
-  const updateTier = (id: string, field: keyof TicketTier, value: any) => {
+  const updateTier = (id: string, field: keyof TicketTier, value: string | number | boolean | PricingTier[] | undefined) => {
     onChange(tiers.map((tier) => (tier.id === id ? { ...tier, [field]: value } : tier)));
   };
 

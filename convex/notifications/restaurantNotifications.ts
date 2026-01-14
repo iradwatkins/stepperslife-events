@@ -6,7 +6,6 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
 
 /**
  * Subscribe restaurant to push notifications
@@ -203,7 +202,7 @@ export const sendToRestaurant = internalMutation({
         });
 
         sentCount++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Log failed notification
         await ctx.db.insert("notificationLog", {
           restaurantId: args.restaurantId,
@@ -212,7 +211,7 @@ export const sendToRestaurant = internalMutation({
           body: args.body,
           foodOrderId: args.foodOrderId,
           status: "FAILED",
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           sentAt: now,
         });
 

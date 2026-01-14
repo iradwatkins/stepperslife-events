@@ -6,7 +6,6 @@
 import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
 
 const STATUS_MESSAGES: Record<string, { title: string; body: (orderNumber: string) => string }> = {
   CONFIRMED: {
@@ -202,7 +201,7 @@ export const sendToCustomer = internalMutation({
         });
 
         sentCount++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Log failed notification
         await ctx.db.insert("notificationLog", {
           userId: args.userId,
@@ -211,7 +210,7 @@ export const sendToCustomer = internalMutation({
           body: args.body,
           foodOrderId: args.foodOrderId,
           status: "FAILED",
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           sentAt: now,
         });
 
@@ -243,7 +242,7 @@ export const notifyOrderStatusUpdate = action({
     orderNumber: v.string(),
     newStatus: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ success: boolean; reason?: string; sent?: number }> => {
     const statusConfig = STATUS_MESSAGES[args.newStatus];
 
     if (!statusConfig) {
@@ -254,9 +253,8 @@ export const notifyOrderStatusUpdate = action({
     const body = statusConfig.body(args.orderNumber);
 
     // Send push notification using the internal mutation reference
-    const sendToCustomerInternal = internal.notifications.customerNotifications as any;
     const pushResult = await ctx.runMutation(
-      sendToCustomerInternal.sendToCustomer,
+      internal.notifications.customerNotifications.sendToCustomer,
       {
         userId: args.customerId,
         type: "ORDER_STATUS_UPDATE",
@@ -285,10 +283,9 @@ export const sendTestNotification = action({
   args: {
     userId: v.id("users"),
   },
-  handler: async (ctx, args) => {
-    const sendToCustomerInternal = internal.notifications.customerNotifications as any;
+  handler: async (ctx, args): Promise<{ success: boolean; sent?: number }> => {
     const result = await ctx.runMutation(
-      sendToCustomerInternal.sendToCustomer,
+      internal.notifications.customerNotifications.sendToCustomer,
       {
         userId: args.userId,
         type: "TEST",

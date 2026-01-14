@@ -113,11 +113,12 @@ export function CalendarEventQuickActions({
   const isUpcoming = event.start > new Date();
 
   // Shared content for both modal types
-  const EventHeader = () => (
+  const eventHeader = (
     <div className="flex items-start gap-4 mb-4">
       {/* Event Image or Icon */}
       <div className="w-16 h-16 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
         {event.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.imageUrl}
             alt={event.title}
@@ -197,7 +198,7 @@ export function CalendarEventQuickActions({
     }
   };
 
-  const ActionButtons = () => (
+  const actionButtons = (
     <div className="space-y-3">
       {/* Primary Actions */}
       <div className="grid grid-cols-2 gap-2">
@@ -373,8 +374,8 @@ export function CalendarEventQuickActions({
               <BottomSheetTitle className="sr-only">Quick Actions</BottomSheetTitle>
             </BottomSheetHeader>
             <BottomSheetBody>
-              <EventHeader />
-              <ActionButtons />
+              {eventHeader}
+              {actionButtons}
             </BottomSheetBody>
           </BottomSheetContent>
         </BottomSheet>
@@ -412,8 +413,8 @@ export function CalendarEventQuickActions({
               Manage your {isEvent ? "event" : "class"}
             </DialogDescription>
           </DialogHeader>
-          <EventHeader />
-          <ActionButtons />
+          {eventHeader}
+          {actionButtons}
         </DialogContent>
       </Dialog>
 

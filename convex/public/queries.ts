@@ -653,7 +653,7 @@ export const getPublicEventDetails = query({
     const now = Date.now();
     const isPastEvent = event.endDate ? event.endDate < now : false;
     const allTiersSoldOut = ticketTiers && ticketTiers.length > 0
-      ? ticketTiers.every((tier: any) => tier.sold >= tier.quantity)
+      ? ticketTiers.every((tier) => tier.sold >= tier.quantity)
       : false;
 
     let ticketingStatus: {

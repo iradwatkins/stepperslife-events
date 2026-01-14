@@ -1,5 +1,4 @@
 import { internalMutation } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
 
 // Helper to create dates for test events
 function createEventDate(year: number, month: number, day: number, hour: number = 20): number {

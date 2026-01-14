@@ -29,14 +29,14 @@ export async function GET() {
           "To test error capture, uncomment the throw line in /app/api/sentry-test/route.ts",
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     // Capture the error with Sentry
     Sentry.captureException(error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
         sentryNotified: true,
       },
       { status: 500 }

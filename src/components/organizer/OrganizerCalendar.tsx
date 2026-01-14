@@ -1,16 +1,10 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay, addMonths, subMonths } from "date-fns";
 import { enUS } from "date-fns/locale";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  List,
-  LayoutGrid,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { YearCalendarView } from "./YearCalendarView";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -41,7 +35,6 @@ export interface CalendarEvent {
 interface OrganizerCalendarProps {
   events: CalendarEvent[];
   onEventClick?: (event: CalendarEvent) => void;
-  onEventEdit?: (eventId: string) => void;
   eventType: "event" | "class";
   colorMap?: Record<string, string>;
 }
@@ -51,7 +44,7 @@ type CalendarViewType = "day" | "week" | "month" | "year";
 export function OrganizerCalendar({
   events,
   onEventClick,
-  onEventEdit,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   eventType,
   colorMap = {},
 }: OrganizerCalendarProps) {
@@ -62,6 +55,7 @@ export function OrganizerCalendar({
 
   // Initialize on client-side only to avoid hydration mismatch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional for hydration fix
     setCurrentDate(new Date());
     setIsMounted(true);
   }, []);
@@ -157,9 +151,6 @@ export function OrganizerCalendar({
     },
     [colorMap]
   );
-
-  // Custom toolbar - we're rendering our own
-  const CustomToolbar = () => null;
 
   // Show loading skeleton until client-side mounted (prevents hydration mismatch)
   if (!isMounted || !currentDate) {

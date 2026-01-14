@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { AllRoles, NavUser } from "@/lib/navigation/types";
 import {
   Workspace,
-  WORKSPACES,
   getWorkspaceForRole,
   getWorkspaceById,
   getUserWorkspaces,
@@ -71,7 +70,7 @@ interface WorkspaceContextState {
 const WorkspaceContext = createContext<WorkspaceContextState | undefined>(undefined);
 
 interface WorkspaceProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
   initialUser?: NavUser | null;
   initialRole?: AllRoles;
 }
@@ -138,9 +137,10 @@ export function WorkspaceProvider({
     : [];
   const multipleWorkspaces = user ? hasMultipleWorkspaces(user) : false;
 
-  // Load persisted state on mount
+  // Load persisted state on mount - only runs when user changes
   useEffect(() => {
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoaded(true);
       return;
     }
@@ -162,9 +162,9 @@ export function WorkspaceProvider({
           // Fallback to first available role
           setCurrentRole(validRoles[0]);
         }
-      } else if (!currentRole && user) {
+      } else {
         // No saved state, use user's primary role
-        setCurrentRole(user.role);
+        setCurrentRole((prev) => prev ?? user.role);
       }
     } catch (error) {
       console.error("Failed to load workspace state:", error);

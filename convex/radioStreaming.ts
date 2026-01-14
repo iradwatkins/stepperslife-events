@@ -7,6 +7,7 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // ============================================
 // Public Queries - No Authentication Required
@@ -1298,7 +1299,7 @@ export const endListenSession = mutation({
 export const cleanupStaleSessions = mutation({
   args: {},
   handler: async (ctx) => {
-    const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+    const sessionTimeoutMs = 2 * 60 * 1000;
 
     // Get all active sessions
     const activeSessions = await ctx.db
@@ -1306,14 +1307,14 @@ export const cleanupStaleSessions = mutation({
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    const stationsToUpdate = new Set<string>();
+    const stationsToUpdate = new Set<Id<"radioStations">>();
     let cleanedCount = 0;
 
     for (const session of activeSessions) {
       // If no heartbeat for 2 minutes, mark as ended
       // We use startedAt as proxy - in production you'd add a lastHeartbeat field
       const sessionAge = Date.now() - session.startedAt;
-      if (sessionAge > 2 * 60 * 1000 && !session.endedAt) {
+      if (sessionAge > sessionTimeoutMs && !session.endedAt) {
         // Only clean up if session is older than 2 min and seems abandoned
         // This is a simple heuristic - in production, use heartbeat timestamps
         const now = Date.now();
@@ -1332,13 +1333,13 @@ export const cleanupStaleSessions = mutation({
       const activeListeners = await ctx.db
         .query("radioListenSessions")
         .withIndex("by_isActive", (q) =>
-          q.eq("isActive", true).eq("stationId", stationId as any)
+          q.eq("isActive", true).eq("stationId", stationId)
         )
         .collect();
 
-      const station = await ctx.db.get(stationId as any);
+      const station = await ctx.db.get(stationId);
       if (station) {
-        await ctx.db.patch(stationId as any, {
+        await ctx.db.patch(stationId, {
           currentListeners: activeListeners.length,
           updatedAt: Date.now(),
         });

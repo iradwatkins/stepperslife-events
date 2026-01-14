@@ -1,6 +1,39 @@
 import { internalMutation, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 
+// Type definitions for seed results
+interface SeedUserResult {
+  created: number;
+  total: number;
+}
+
+interface SeedEventResult {
+  created: number;
+  total: number;
+}
+
+interface SeedClassResult {
+  created: number;
+  total: number;
+}
+
+interface SeedRestaurantResult {
+  created: number;
+  total: number;
+}
+
+interface SeedVendorResult {
+  productsCreated: number;
+}
+
+interface SeedResults {
+  users?: SeedUserResult;
+  events?: SeedEventResult;
+  classes?: SeedClassResult;
+  restaurants?: SeedRestaurantResult;
+  vendor?: SeedVendorResult;
+}
+
 /**
  * Master seed orchestration
  * Runs all seed functions in the correct order to populate the database
@@ -22,16 +55,10 @@ export const seedAll = internalAction({
   args: {},
   handler: async (ctx): Promise<{
     success: boolean;
-    results: {
-      users: any;
-      events: any;
-      classes: any;
-      restaurants: any;
-      vendor: any;
-    };
+    results: SeedResults;
     errors: string[];
   }> => {
-    const results: any = {};
+    const results: SeedResults = {};
     const errors: string[] = [];
 
     // 1. Seed Users (must be first)
@@ -39,9 +66,10 @@ export const seedAll = internalAction({
     try {
       results.users = await ctx.runMutation(internal.admin.seedUsers.seedUsers, {});
       console.log(`✅ Users: ${results.users.created} created, ${results.users.total} total`);
-    } catch (error: any) {
-      errors.push(`Users: ${error.message}`);
-      console.error(`❌ Users failed: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Users: ${errorMessage}`);
+      console.error(`❌ Users failed: ${errorMessage}`);
       // Users are required for other seeds, so fail early
       return { success: false, results, errors };
     }
@@ -51,9 +79,10 @@ export const seedAll = internalAction({
     try {
       results.events = await ctx.runMutation(internal.admin.seedEvents.seedEvents, {});
       console.log(`✅ Events: ${results.events.created} created, ${results.events.total} total`);
-    } catch (error: any) {
-      errors.push(`Events: ${error.message}`);
-      console.error(`❌ Events failed: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Events: ${errorMessage}`);
+      console.error(`❌ Events failed: ${errorMessage}`);
     }
 
     // 3. Seed Classes
@@ -61,9 +90,10 @@ export const seedAll = internalAction({
     try {
       results.classes = await ctx.runMutation(internal.admin.seedClasses.seedClasses, {});
       console.log(`✅ Classes: ${results.classes.created} created, ${results.classes.total} total`);
-    } catch (error: any) {
-      errors.push(`Classes: ${error.message}`);
-      console.error(`❌ Classes failed: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Classes: ${errorMessage}`);
+      console.error(`❌ Classes failed: ${errorMessage}`);
     }
 
     // 4. Seed Restaurants
@@ -71,9 +101,10 @@ export const seedAll = internalAction({
     try {
       results.restaurants = await ctx.runMutation(internal.admin.seedRestaurants.seedRestaurants, {});
       console.log(`✅ Restaurants: ${results.restaurants.created} created, ${results.restaurants.total} total`);
-    } catch (error: any) {
-      errors.push(`Restaurants: ${error.message}`);
-      console.error(`❌ Restaurants failed: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Restaurants: ${errorMessage}`);
+      console.error(`❌ Restaurants failed: ${errorMessage}`);
     }
 
     // 5. Seed Vendor & Products
@@ -81,9 +112,10 @@ export const seedAll = internalAction({
     try {
       results.vendor = await ctx.runMutation(internal.admin.seedVendor.seedVendor, {});
       console.log(`✅ Vendor: ${results.vendor.productsCreated} products created`);
-    } catch (error: any) {
-      errors.push(`Vendor: ${error.message}`);
-      console.error(`❌ Vendor failed: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      errors.push(`Vendor: ${errorMessage}`);
+      console.error(`❌ Vendor failed: ${errorMessage}`);
     }
 
     const success = errors.length === 0;
@@ -126,8 +158,7 @@ export const seedAll = internalAction({
  */
 export const runSeedUsers = internalMutation({
   args: {},
-  handler: async (ctx) => {
-    const { seedUsers } = await import("./seedUsers");
+  handler: async () => {
     // Note: We can't directly call since seedUsers is already an internalMutation
     // This is just for documentation - use seedUsers.seedUsers directly
     return { message: "Use: npx convex run --no-push admin/seedUsers:seedUsers {}" };
@@ -136,28 +167,28 @@ export const runSeedUsers = internalMutation({
 
 export const runSeedEvents = internalMutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async () => {
     return { message: "Use: npx convex run --no-push admin/seedEvents:seedEvents {}" };
   },
 });
 
 export const runSeedClasses = internalMutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async () => {
     return { message: "Use: npx convex run --no-push admin/seedClasses:seedClasses {}" };
   },
 });
 
 export const runSeedRestaurants = internalMutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async () => {
     return { message: "Use: npx convex run --no-push admin/seedRestaurants:seedRestaurants {}" };
   },
 });
 
 export const runSeedVendor = internalMutation({
   args: {},
-  handler: async (ctx) => {
+  handler: async () => {
     return { message: "Use: npx convex run --no-push admin/seedVendor:seedVendor {}" };
   },
 });

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { Id, Doc } from "../_generated/dataModel";
 
 /**
  * Get event scanning statistics
@@ -16,7 +17,6 @@ export const getEventScanStats = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    const totalTickets = allTickets.length;
     const scannedTickets = allTickets.filter((t) => t.status === "SCANNED").length;
     const validTickets = allTickets.filter((t) => t.status === "VALID").length;
     const pendingTickets = allTickets.filter((t) => t.status === "PENDING").length;
@@ -194,7 +194,7 @@ export const getMyScannableEvents = query({
 
     if (!user) return [];
 
-    const eventIds: Set<string> = new Set();
+    const eventIds: Set<Id<"events">> = new Set();
 
     // If admin, can scan all events
     if (user.role === "admin") {
@@ -245,7 +245,7 @@ export const getMyScannableEvents = query({
     // Get full event details
     const events = await Promise.all(
       Array.from(eventIds).map(async (eventId) => {
-        const event: any = await ctx.db.get(eventId as any);
+        const event = await ctx.db.get(eventId) as Doc<"events"> | null;
         if (!event || !("name" in event)) return null;
 
         return {
@@ -415,7 +415,7 @@ export const getTodaysScannableEvents = query({
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const todayEnd = todayStart + 24 * 60 * 60 * 1000; // 24 hours later
 
-    const eventIds: Set<string> = new Set();
+    const eventIds: Set<Id<"events">> = new Set();
 
     // If admin, can scan all events
     if (user.role === "admin") {
@@ -475,7 +475,7 @@ export const getTodaysScannableEvents = query({
     // Get full event details
     const events = await Promise.all(
       Array.from(eventIds).map(async (eventId) => {
-        const event: any = await ctx.db.get(eventId as any);
+        const event = await ctx.db.get(eventId) as Doc<"events"> | null;
         if (!event || !("name" in event)) return null;
 
         return {
@@ -484,9 +484,7 @@ export const getTodaysScannableEvents = query({
           startDate: event.startDate,
           endDate: event.endDate,
           location: event.location,
-          venue: event.venue,
           imageUrl: event.imageUrl,
-          slug: event.slug,
         };
       })
     );

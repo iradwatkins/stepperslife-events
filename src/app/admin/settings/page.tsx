@@ -22,6 +22,17 @@ import {
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+interface ResetResult {
+  events: number;
+  tickets: number;
+  orders: number;
+  ticketTiers: number;
+  paymentConfigs: number;
+  staff: number;
+  bundles: number;
+  users: number;
+}
+
 export default function AdminSettingsPage() {
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<"general" | "payments" | "notifications" | "security">(
@@ -605,7 +616,7 @@ function NotificationSettings() {
 
 function SecuritySettings() {
   const [isResetting, setIsResetting] = useState(false);
-  const [resetResult, setResetResult] = useState<any>(null);
+  const [resetResult, setResetResult] = useState<ResetResult | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const resetDatabase = useMutation(api.admin.cleanup.resetAll);
 
@@ -620,8 +631,8 @@ function SecuritySettings() {
       const result = await resetDatabase({ keepUserEmail: "thestepperslife@gmail.com" });
       setResetResult(result);
       setConfirmReset(false);
-    } catch (error: any) {
-      toast.error("Reset failed: " + error.message);
+    } catch (error) {
+      toast.error("Reset failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsResetting(false);
     }

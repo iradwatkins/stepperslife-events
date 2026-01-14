@@ -89,8 +89,8 @@ export default function MyTeamPage() {
       });
 
       setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      setError(err.message || "Failed to add sub-seller");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add sub-seller");
     }
   };
 
@@ -101,8 +101,8 @@ export default function MyTeamPage() {
         autoAssignToNewEvents: !currentValue,
       });
       toast.success("Auto-assign setting updated");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to toggle auto-assign");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to toggle auto-assign");
     }
   };
 
@@ -110,8 +110,8 @@ export default function MyTeamPage() {
     try {
       await removeStaff({ staffId });
       toast.success("Sub-seller removed");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to remove sub-seller");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove sub-seller");
     }
   };
 

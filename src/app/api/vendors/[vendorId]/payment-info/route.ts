@@ -57,10 +57,10 @@ export async function GET(
       acceptsCashApp: vendor.stripeCashAppEnabled || false,
       payoutsEnabled: vendor.stripePayoutsEnabled || false,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Vendor Payment Info] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch vendor payment info" },
+      { error: error instanceof Error ? error.message : "Failed to fetch vendor payment info" },
       { status: 500 }
     );
   }

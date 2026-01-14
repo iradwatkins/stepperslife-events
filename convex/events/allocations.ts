@@ -19,7 +19,7 @@ export const allocateEventTickets = mutation({
   },
   handler: async (ctx, args) => {
     // Verify ownership (handles both organizers and admins)
-    const { user, event } = await requireEventOwnership(ctx, args.eventId);
+    const { user } = await requireEventOwnership(ctx, args.eventId);
 
     // Check if this is the organizer's first event
     const allOrganizerEvents = await ctx.db

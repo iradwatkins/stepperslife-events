@@ -4,7 +4,7 @@ import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { getCurrentUser } from "./lib/auth";
 import { requireRestaurantRole, canTransitionOrderStatus, getRestaurantAccess } from "./lib/restaurantAuth";
-import { validatePaymentStatus, VALID_PAYMENT_STATUSES } from "./lib/validation";
+import { validatePaymentStatus } from "./lib/validation";
 
 // Valid order statuses - used for validation
 const VALID_ORDER_STATUSES = [
@@ -612,7 +612,7 @@ export const updatePaymentStatus = mutation({
 
       if (user && order.customerId && order.customerId === user._id) {
         // Customer can update their own order's payment status
-        const updateData: Record<string, any> = {
+        const updateData: Record<string, string | undefined> = {
           paymentStatus: args.paymentStatus,
         };
         if (args.paymentMethod) updateData.paymentMethod = args.paymentMethod;
@@ -625,7 +625,7 @@ export const updatePaymentStatus = mutation({
     // Otherwise require MANAGER role
     await requireRestaurantRole(ctx, order.restaurantId, "RESTAURANT_MANAGER");
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, string | undefined> = {
       paymentStatus: args.paymentStatus,
     };
     if (args.paymentMethod) updateData.paymentMethod = args.paymentMethod;

@@ -6,6 +6,15 @@ import { api } from "@/convex/_generated/api";
 import { Ticket, Check, AlertCircle, Loader2 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
+interface ActivatedTicketData {
+  ticketCode: string;
+  eventName: string;
+  eventDate?: number;
+  tierName: string;
+  attendeeName?: string;
+  attendeeEmail: string;
+}
+
 export default function ActivatePage() {
   const [activationCode, setActivationCode] = useState("");
   const [email, setEmail] = useState("");
@@ -13,7 +22,7 @@ export default function ActivatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activated, setActivated] = useState(false);
-  const [ticketData, setTicketData] = useState<any>(null);
+  const [ticketData, setTicketData] = useState<ActivatedTicketData | null>(null);
 
   const activateTicket = useMutation(api.tickets.mutations.activateTicket);
 
@@ -41,8 +50,8 @@ export default function ActivatePage() {
 
       setTicketData(result);
       setActivated(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to activate ticket. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to activate ticket. Please try again.");
     } finally {
       setLoading(false);
     }

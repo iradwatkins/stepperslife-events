@@ -25,7 +25,7 @@ export const PRIMARY_ADMIN_EMAIL = "bobbygwatkins@gmail.com";
  * Check if an email is an admin email
  */
 export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase() as any);
+  return (ADMIN_EMAILS as readonly string[]).includes(email.toLowerCase());
 }
 
 /**

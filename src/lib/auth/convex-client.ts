@@ -39,7 +39,7 @@ function getConvexClient(): ConvexHttpClient {
 export const convexClient = new Proxy({} as ConvexHttpClient, {
   get(_target, prop) {
     const client = getConvexClient();
-    const value = (client as any)[prop];
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
     if (typeof value === "function") {
       return value.bind(client);
     }

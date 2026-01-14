@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -8,6 +8,40 @@ import BuyTableButton from "./BuyTableButton";
 import TableCapacityIndicator from "./TableCapacityIndicator";
 import AccessibilityFilters, { type SeatFilters } from "./AccessibilityFilters";
 import { toast } from "sonner";
+
+// Seat data from seating chart
+interface ChartSeat {
+  id: string;
+  number: string;
+  label?: string;
+  status?: "AVAILABLE" | "RESERVED" | "BLOCKED" | "UNAVAILABLE";
+  type?: "STANDARD" | "WHEELCHAIR" | "COMPANION" | "VIP" | "STANDING";
+  sessionId?: string;
+  sessionExpiry?: number;
+  position?: { angle?: number; side?: string; offset?: number };
+}
+
+// Table data from seating chart
+interface ChartTable {
+  id: string;
+  number: string | number;
+  shape: "ROUND" | "RECTANGULAR" | "SQUARE" | "CUSTOM";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  capacity: number;
+  seats?: ChartSeat[];
+}
+
+// Section data from seating chart
+interface ChartSection {
+  id: string;
+  name: string;
+  color?: string;
+  ticketTierId?: string;
+  tables?: ChartTable[];
+}
 
 interface InteractiveSeatingChartProps {
   eventId: Id<"events">;
@@ -51,7 +85,6 @@ export default function InteractiveSeatingChart({
   const cleanupExpired = useMutation(api.seating.mutations.cleanupExpiredSessionHolds);
 
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
-  const [hoveredTable, setHoveredTable] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [sessionId] = useState(
     () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
@@ -79,6 +112,7 @@ export default function InteractiveSeatingChart({
       // Release all seats when component unmounts
       releaseSeats({ eventId, sessionId }).catch(console.error);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanupExpired and releaseSeats are stable mutations
   }, [eventId, sessionId]);
 
   if (!seatingChart) {
@@ -134,8 +168,8 @@ export default function InteractiveSeatingChart({
           seatType,
           price,
         });
-      } catch (error: any) {
-        toast.error(error.message || "Failed to select seat. It may have been taken by another user.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to select seat. It may have been taken by another user.");
       }
     }
   };
@@ -149,7 +183,7 @@ export default function InteractiveSeatingChart({
   const handleBuyTable = async (
     tableId: string,
     tableNumber: string | number,
-    availableSeats: any[]
+    availableSeats: ChartSeat[]
   ) => {
     try {
       const seatHolds = availableSeats.map((seat) => ({
@@ -172,12 +206,12 @@ export default function InteractiveSeatingChart({
           tableId,
           tableNumber,
           seatNumber: seat.number,
-          seatType: seat.type,
+          seatType: seat.type || "STANDARD",
           price: seatPrice,
         });
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to buy table. Some seats may have been taken.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to buy table. Some seats may have been taken.");
     }
   };
 
@@ -220,32 +254,19 @@ export default function InteractiveSeatingChart({
     return tier.price || 0;
   };
 
-  // Filter seats based on accessibility filters
-  const shouldShowSeat = (seatType: string) => {
-    if (seatFilters.wheelchairOnly) {
-      return seatType === "WHEELCHAIR";
-    }
-
-    if (seatType === "WHEELCHAIR" && !seatFilters.showWheelchair) return false;
-    if (seatType === "VIP" && !seatFilters.showVIP) return false;
-    if (seatType === "STANDARD" && !seatFilters.showStandard) return false;
-
-    return true;
-  };
-
   // Build flat list of all seats for rendering
   const renderData: Array<{
     tableId: string;
     tableNumber: string | number;
-    table: any;
+    table: ChartTable;
     seats: SeatRenderData[];
   }> = [];
 
-  seatingChart.sections?.forEach((section: any) => {
-    section.tables?.forEach((table: any) => {
+  (seatingChart.sections as ChartSection[] | undefined)?.forEach((section: ChartSection) => {
+    section.tables?.forEach((table: ChartTable) => {
       const tableSeats: SeatRenderData[] = [];
 
-      table.seats?.forEach((seat: any, idx: number) => {
+      table.seats?.forEach((seat: ChartSeat, idx: number) => {
         const seatId = `${table.id}-${seat.number}`;
         let status: "available" | "selected" | "sold" | "reserved" = "available";
 
@@ -268,7 +289,7 @@ export default function InteractiveSeatingChart({
           y: table.y + table.height / 2 + Math.sin(angle) * radius,
           number: seat.number,
           status,
-          type: seat.type,
+          type: seat.type || "STANDARD",
           price: getSeatPrice(table.id),
         });
       });
@@ -470,7 +491,7 @@ export default function InteractiveSeatingChart({
                           handleBuyTable(
                             tableId,
                             tableNumber,
-                            table.seats.filter((s: any) => {
+                            (table.seats || []).filter((s: ChartSeat) => {
                               const seatId = `${tableId}-${s.number}`;
                               const renderSeat = seats.find((rs) => rs.id === seatId);
                               return renderSeat?.status === "available";

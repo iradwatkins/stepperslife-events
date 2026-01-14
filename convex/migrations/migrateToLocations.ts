@@ -1,6 +1,5 @@
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
 
 /**
  * Migration: Convert flat restaurant addresses to multi-location model

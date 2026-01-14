@@ -101,8 +101,8 @@ export default function StaffTransfersPage() {
       toast.success(result.message);
       setShowNewTransferDialog(false);
       resetForm();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to request transfer");
     }
   };
 
@@ -112,8 +112,8 @@ export default function StaffTransfersPage() {
       toast.success(
         `Received ${result.ticketsReceived} tickets. New balance: ${result.newBalance}`
       );
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to accept transfer");
     }
   };
 
@@ -121,8 +121,8 @@ export default function StaffTransfersPage() {
     try {
       await rejectTransfer({ transferId, reason });
       toast.success("Transfer rejected");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reject transfer");
     }
   };
 
@@ -130,8 +130,8 @@ export default function StaffTransfersPage() {
     try {
       await cancelTransfer({ transferId });
       toast.success("Transfer cancelled");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to cancel transfer");
     }
   };
 

@@ -13,6 +13,57 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+type SeatType =
+  | "STANDARD"
+  | "WHEELCHAIR"
+  | "COMPANION"
+  | "VIP"
+  | "BLOCKED"
+  | "STANDING"
+  | "PARKING"
+  | "TENT";
+
+interface TemplateSeat {
+  id: string;
+  number: string;
+  type: SeatType;
+  status: "AVAILABLE" | "RESERVED" | "BLOCKED";
+}
+
+interface TemplateRow {
+  id: string;
+  label?: string;
+  seats: TemplateSeat[];
+}
+
+interface TemplateTable {
+  id: string;
+  number: string | number;
+  shape: "ROUND" | "RECTANGULAR" | "SQUARE" | "CUSTOM";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  capacity: number;
+  seatArc?: { startAngle?: number; arcDegrees?: number };
+  seats: TemplateSeat[];
+}
+
+interface TemplateSection {
+  id: string;
+  name: string;
+  color?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+  containerType?: "ROWS" | "TABLES";
+  rows?: TemplateRow[];
+  tables?: TemplateTable[];
+}
+
 export interface SeatingTemplate {
   id: string;
   name: string;
@@ -28,23 +79,13 @@ export interface SeatingTemplate {
     | "gala"
     | "banquet"
     | "custom";
-  sections: any[];
+  sections: TemplateSection[];
   estimatedCapacity: number;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
-type SeatType =
-  | "STANDARD"
-  | "WHEELCHAIR"
-  | "COMPANION"
-  | "VIP"
-  | "BLOCKED"
-  | "STANDING"
-  | "PARKING"
-  | "TENT";
-
-const generateSeats = (count: number, type: SeatType = "STANDARD") => {
+const generateSeats = (count: number, type: SeatType = "STANDARD"): TemplateSeat[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: generateId(),
     number: String(i + 1),

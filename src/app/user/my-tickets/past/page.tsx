@@ -9,17 +9,28 @@ import { Ticket, Calendar, MapPin, CheckCircle, Download, Search } from "lucide-
 import Link from "next/link";
 import { useState } from "react";
 
+interface PastTicket {
+  id: string;
+  eventName: string;
+  eventDate: number;
+  location: string | { venueName?: string; city?: string; state?: string };
+  scanned?: boolean;
+}
+
 export default function PastTicketsPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Mock data - will be replaced with actual Convex query
-  const tickets: any[] = [];
+  const tickets: PastTicket[] = [];
 
-  const filteredTickets = tickets.filter((ticket: any) =>
-    ticket.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTickets = tickets.filter((ticket) => {
+    const locationString = typeof ticket.location === 'string'
+      ? ticket.location
+      : [ticket.location?.venueName, ticket.location?.city, ticket.location?.state].filter(Boolean).join(' ');
+    return ticket.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      locationString.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -74,7 +85,7 @@ export default function PastTicketsPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredTickets.map((ticket: any) => (
+          {filteredTickets.map((ticket) => (
             <Card key={ticket.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">

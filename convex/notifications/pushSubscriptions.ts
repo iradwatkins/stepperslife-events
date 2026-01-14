@@ -126,7 +126,11 @@ export const updatePreferences = mutation({
       .collect();
 
     for (const sub of subscriptions) {
-      const updates: any = { updatedAt: Date.now() };
+      const updates: {
+        updatedAt: number;
+        notifyOnCashOrders?: boolean;
+        notifyOnOnlineSales?: boolean;
+      } = { updatedAt: Date.now() };
 
       if (args.notifyOnCashOrders !== undefined) {
         updates.notifyOnCashOrders = args.notifyOnCashOrders;

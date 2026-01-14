@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { Calendar, Search, Filter, AlertCircle, Ticket, Music, Users, Star, ChevronDown, MapPin, Clock, Loader2 } from "lucide-react";
+import { Calendar, Search, Filter, AlertCircle, Ticket, Music, Users, Star, ChevronDown, MapPin, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -22,7 +22,7 @@ import { DateRangePicker } from "@/components/events/DateRangePicker";
 import { LocationFilter, type LocationFilter as LocationFilterType } from "@/components/events/LocationFilter";
 import { MobileFiltersSheet } from "@/components/events/MobileFiltersSheet";
 import { EventSkeletonGrid } from "@/components/events/EventCardSkeleton";
-import { calculateDistance, formatDistance } from "@/lib/geo";
+import { calculateDistance } from "@/lib/geo";
 import {
   type EventFilter,
   getFilterDateRange,
@@ -33,10 +33,46 @@ import {
   getEmptyStateMessage,
 } from "@/lib/date-utils";
 
+// Pre-computed star positions and animation delays for hero section
+// Using deterministic values to avoid Math.random() during render (React hooks purity)
+const STAR_CONFIGS = [
+  { left: 15, top: 25, duration: 2.8, delay: 0.3 },
+  { left: 42, top: 18, duration: 3.2, delay: 1.1 },
+  { left: 78, top: 35, duration: 2.5, delay: 0.7 },
+  { left: 28, top: 62, duration: 3.5, delay: 1.8 },
+  { left: 55, top: 45, duration: 2.9, delay: 0.2 },
+  { left: 82, top: 72, duration: 3.1, delay: 1.4 },
+  { left: 12, top: 78, duration: 2.6, delay: 0.9 },
+  { left: 65, top: 22, duration: 3.4, delay: 1.6 },
+  { left: 38, top: 85, duration: 2.7, delay: 0.5 },
+  { left: 88, top: 55, duration: 3.0, delay: 1.2 },
+  { left: 22, top: 42, duration: 3.3, delay: 0.8 },
+  { left: 72, top: 88, duration: 2.4, delay: 1.9 },
+] as const;
+
+// Event data structure
+interface EventData {
+  _id: string;
+  name: string;
+  description?: string;
+  startDate?: string | number;
+  imageUrl?: string;
+  eventType?: string;
+  location?: string | { venueName?: string; city?: string; state?: string; lat?: number; lng?: number };
+  ticketsVisible?: boolean;
+  categories?: string[];
+}
+
+// Category data structure
+interface CategoryData {
+  name: string;
+  slug?: string;
+}
+
 // Props for server-side initial data
 interface EventsListClientProps {
-  initialEvents?: { events: any[]; counts: { all: number; tonight: number; weekend: number; month: number }; filter: string };
-  initialCategories?: any[];
+  initialEvents?: { events: EventData[]; counts: { all: number; tonight: number; weekend: number; month: number }; filter: string };
+  initialCategories?: CategoryData[];
   initialFilterCounts?: { all: number; tonight: number; weekend: number; month: number };
 }
 
@@ -49,8 +85,14 @@ export default function EventsListClient({
   const router = useRouter();
 
   // Get filter from URL or default to 'all'
-  const urlFilter = searchParams.get('filter') as EventFilter | null;
-  const [activeFilter, setActiveFilter] = useState<EventFilter>(urlFilter || 'all');
+  // Using a function to compute initial state avoids needing a sync effect
+  const [activeFilter, setActiveFilter] = useState<EventFilter>(() => {
+    const filter = searchParams.get('filter') as EventFilter | null;
+    if (filter && ['tonight', 'weekend', 'month', 'all'].includes(filter)) {
+      return filter;
+    }
+    return 'all';
+  });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
@@ -287,18 +329,13 @@ export default function EventsListClient({
     router.replace(newUrl, { scroll: false });
   };
 
-  // Sync filter from URL on mount and URL changes
-  useEffect(() => {
-    const urlFilter = searchParams.get('filter') as EventFilter | null;
-    if (urlFilter && ['tonight', 'weekend', 'month', 'all'].includes(urlFilter)) {
-      setActiveFilter(urlFilter);
-    }
-  }, [searchParams]);
-
   // Reset pagination when filters change
+  // Using useEffect is intentional here - we want to sync visibleCount with filter state
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setVisibleCount(12);
   }, [activeFilter, searchTerm, selectedCategory, showPastEvents, dateRange, locationFilter]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Load more events callback
   const loadMore = useCallback(() => {
@@ -337,6 +374,7 @@ export default function EventsListClient({
   const hasMore = events && visibleCount < events.length;
 
   // Timeout fallback - after 10 seconds, show error state
+  // Using useEffect is intentional here - we sync loadingTimeout state with events loading status
   useEffect(() => {
     if (events === undefined) {
       const timer = setTimeout(() => {
@@ -344,6 +382,7 @@ export default function EventsListClient({
       }, 10000);
       return () => clearTimeout(timer);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingTimeout(false);
     }
   }, [events]);
@@ -497,22 +536,22 @@ export default function EventsListClient({
             </motion.div>
 
             {/* Star Icons */}
-            {[...Array(12)].map((_, i) => (
+            {STAR_CONFIGS.map((config, i) => (
               <motion.div
                 key={i}
                 className="absolute"
                 style={{
-                  left: `${10 + Math.random() * 80}%`,
-                  top: `${10 + Math.random() * 80}%`,
+                  left: `${config.left}%`,
+                  top: `${config.top}%`,
                 }}
                 animate={{
                   opacity: [0.1, 0.4, 0.1],
                   scale: [1, 1.2, 1],
                 }}
                 transition={{
-                  duration: 2 + Math.random() * 2,
+                  duration: config.duration,
                   repeat: Infinity,
-                  delay: Math.random() * 2,
+                  delay: config.delay,
                 }}
               >
                 <Star className="w-3 h-3 md:w-4 md:h-4 text-warning/30 fill-yellow-400/30" />

@@ -38,6 +38,14 @@ import { formatEventDate } from "@/lib/date-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Id } from "@/convex/_generated/dataModel";
+
+// Minimal type for event data used in helper functions
+interface EventData {
+  _id: Id<"events">;
+  eventType?: string;
+  ticketTierCount?: number;
+  ticketsSold?: number;
+}
 import { WelcomePopup } from "@/components/organizer/WelcomePopup";
 import { OrganizerCalendar, CalendarEvent } from "@/components/organizer/OrganizerCalendar";
 import { CalendarEventQuickActions, QuickActionsEvent } from "@/components/organizer/CalendarEventQuickActions";
@@ -69,7 +77,7 @@ export default function OrganizerEventsPage() {
   const markWelcomePopupShown = useMutation(api.users.mutations.markWelcomePopupShown);
 
   // Helper: Check if event needs tickets
-  const needsTickets = (event: any) => {
+  const needsTickets = (event: EventData) => {
     return (
       event.eventType === "TICKETED_EVENT" &&
       (!event.ticketTierCount || event.ticketTierCount === 0)
@@ -277,8 +285,8 @@ export default function OrganizerEventsPage() {
     : 0;
 
   // Helper: Check if event has tickets sold
-  const hasTicketsSold = (event: any) => {
-    return event.ticketsSold > 0;
+  const hasTicketsSold = (event: EventData) => {
+    return (event.ticketsSold ?? 0) > 0;
   };
 
   // Quick select functions (use filteredEvents for current view)

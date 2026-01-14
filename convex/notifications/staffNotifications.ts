@@ -6,7 +6,6 @@
 import { v } from "convex/values";
 import { action, internalMutation } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
 
 /**
  * Send staff invitation email
@@ -125,7 +124,7 @@ export const sendStaffInvitationEmail = action({
         throw new Error(`Postal API error: ${errorData}`);
       }
 
-      const result = await response.json();
+      await response.json(); // Consume response
 
       // Log successful send
       await ctx.runMutation(
@@ -140,7 +139,8 @@ export const sendStaffInvitationEmail = action({
       );
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       // Log failed send
       await ctx.runMutation(
         internal.notifications.staffNotifications.logNotification,
@@ -150,12 +150,12 @@ export const sendStaffInvitationEmail = action({
           title: `Staff Invitation - ${args.restaurantName}`,
           body: `${args.name} invited to ${args.restaurantName} as ${roleLabel}`,
           status: "FAILED",
-          error: error.message,
+          error: errorMessage,
         }
       );
 
       console.error("Failed to send staff invitation email:", error);
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   },
 });
@@ -272,9 +272,9 @@ export const sendInvitationAcceptedEmail = action({
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to send invitation accepted email:", error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   },
 });

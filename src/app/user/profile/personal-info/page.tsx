@@ -11,6 +11,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+interface UserWithProfile {
+  name?: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+}
+
 export default function PersonalInfoPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
   const updateProfile = useMutation(api.users.mutations.updateProfile);
@@ -29,8 +36,8 @@ export default function PersonalInfoPage() {
       setFormData({
         name: currentUser.name || "",
         email: currentUser.email || "",
-        phone: (currentUser as any).phone || "",
-        dateOfBirth: (currentUser as any).dateOfBirth || "",
+        phone: (currentUser as UserWithProfile).phone || "",
+        dateOfBirth: (currentUser as UserWithProfile).dateOfBirth || "",
       });
     }
   }, [currentUser]);
@@ -46,8 +53,8 @@ export default function PersonalInfoPage() {
         dateOfBirth: formData.dateOfBirth,
       });
       toast.success("Profile updated successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -203,8 +210,8 @@ export default function PersonalInfoPage() {
                 setFormData({
                   name: currentUser.name || "",
                   email: currentUser.email || "",
-                  phone: (currentUser as any).phone || "",
-                  dateOfBirth: (currentUser as any).dateOfBirth || "",
+                  phone: (currentUser as UserWithProfile).phone || "",
+                  dateOfBirth: (currentUser as UserWithProfile).dateOfBirth || "",
                 });
               }
             }}>

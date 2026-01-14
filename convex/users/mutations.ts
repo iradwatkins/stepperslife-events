@@ -223,7 +223,12 @@ export const updatePaymentProcessorSettings = mutation({
       throw new Error("Only organizers can configure payment processors");
     }
 
-    const updates: any = { updatedAt: Date.now() };
+    const updates: {
+      updatedAt: number;
+      acceptsStripePayments?: boolean;
+      acceptsPaypalPayments?: boolean;
+      acceptsCashPayments?: boolean;
+    } = { updatedAt: Date.now() };
 
     if (args.acceptsStripePayments !== undefined) {
       updates.acceptsStripePayments = args.acceptsStripePayments;
@@ -434,7 +439,12 @@ export const updatePayPalAccountStatus = mutation({
       throw new Error(`No user found with PayPal merchant ID: ${args.paypalMerchantId}`);
     }
 
-    const updates: any = {
+    const updates: {
+      paypalAccountSetupComplete: boolean;
+      acceptsPaypalPayments: boolean;
+      updatedAt: number;
+      paypalOnboardingStatus?: string;
+    } = {
       paypalAccountSetupComplete: args.setupComplete,
       acceptsPaypalPayments: args.setupComplete,
       updatedAt: Date.now(),
@@ -476,7 +486,15 @@ export const disconnectPaymentProcessor = mutation({
       throw new Error("User not found");
     }
 
-    const updates: any = { updatedAt: Date.now() };
+    const updates: {
+      updatedAt: number;
+      stripeConnectedAccountId?: undefined;
+      stripeAccountSetupComplete?: boolean;
+      acceptsStripePayments?: boolean;
+      paypalMerchantId?: undefined;
+      paypalAccountSetupComplete?: boolean;
+      acceptsPaypalPayments?: boolean;
+    } = { updatedAt: Date.now() };
 
     if (args.processor === "stripe") {
       updates.stripeConnectedAccountId = undefined;
@@ -690,9 +708,18 @@ export const upsertUserFromGoogle = mutation({
 
       // If found by email, link Google ID and ensure admin role if applicable
       if (user) {
-        const updates: any = {
+        const updates: {
+          googleId: string;
+          authProvider: "password" | "google" | "magic_link";
+          name: string;
+          image?: string;
+          emailVerified: boolean;
+          updatedAt: number;
+          role?: "admin" | "organizer" | "instructor" | "restaurateur" | "user";
+          canCreateTicketedEvents?: boolean;
+        } = {
           googleId: args.googleId,
-          authProvider: "google",
+          authProvider: "google" as const,
           name: args.name,
           image: args.image,
           emailVerified: true,
@@ -712,7 +739,13 @@ export const upsertUserFromGoogle = mutation({
 
     // If user exists with Google ID, update and ensure admin role if applicable
     if (user) {
-      const updates: any = {
+      const updates: {
+        name: string;
+        image?: string;
+        updatedAt: number;
+        role?: "admin" | "organizer" | "instructor" | "restaurateur" | "user";
+        canCreateTicketedEvents?: boolean;
+      } = {
         name: args.name,
         image: args.image,
         updatedAt: now,

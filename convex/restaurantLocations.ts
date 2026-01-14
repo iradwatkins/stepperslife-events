@@ -2,7 +2,6 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { requireRestaurantOwner } from "./lib/restaurantAuth";
 import { validateRequiredString, validatePhoneNumber } from "./lib/validation";
-import { Id } from "./_generated/dataModel";
 
 // ==========================================
 // RESTAURANT LOCATIONS - Multi-Location Support

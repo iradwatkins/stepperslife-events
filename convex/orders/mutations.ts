@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { mutation, MutationCtx } from "../_generated/server";
+import { Id } from "../_generated/dataModel";
 
 /**
  * Mark an order as paid (called from Stripe webhook)
@@ -203,8 +204,8 @@ export const markOrderRefundedByPaypalId = mutation({
  * Helper function to release order inventory back to ticket tiers
  */
 async function releaseOrderInventory(
-  ctx: any,
-  orderId: any
+  ctx: MutationCtx,
+  orderId: Id<"orders">
 ): Promise<{ released: number; ticketsCancelled: number }> {
   let released = 0;
   let ticketsCancelled = 0;
@@ -213,16 +214,17 @@ async function releaseOrderInventory(
     // Fetch all order items for this order
     const orderItems = await ctx.db
       .query("orderItems")
-      .withIndex("by_order", (q: any) => q.eq("orderId", orderId))
+      .withIndex("by_order", (q) => q.eq("orderId", orderId))
       .collect();
 
     // Group by ticketTierId to batch updates
-    const tierQuantities: Map<string, number> = new Map();
+    const tierQuantities: Map<Id<"ticketTiers">, number> = new Map();
 
     for (const item of orderItems) {
       if (item.ticketTierId) {
-        const current = tierQuantities.get(item.ticketTierId) || 0;
-        tierQuantities.set(item.ticketTierId, current + 1);
+        const tierId = item.ticketTierId as Id<"ticketTiers">;
+        const current = tierQuantities.get(tierId) || 0;
+        tierQuantities.set(tierId, current + 1);
       }
     }
 
@@ -242,7 +244,7 @@ async function releaseOrderInventory(
     // Cancel any associated tickets
     const tickets = await ctx.db
       .query("tickets")
-      .filter((q: any) => q.eq(q.field("orderId"), orderId))
+      .filter((q) => q.eq(q.field("orderId"), orderId))
       .collect();
 
     for (const ticket of tickets) {
@@ -256,7 +258,7 @@ async function releaseOrderInventory(
     }
 
     console.log(`[Refund] Order ${orderId}: Released ${released} tickets to inventory, cancelled ${ticketsCancelled} tickets`);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[Refund] Error releasing inventory for order ${orderId}:`, error);
   }
 

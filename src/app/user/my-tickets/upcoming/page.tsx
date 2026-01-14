@@ -1,17 +1,31 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Ticket, Calendar, MapPin, QrCode, Download, Share2, Clock } from "lucide-react";
 import Link from "next/link";
 
+interface UpcomingTicket {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventDate: number;
+  location: string | { venueName?: string; city?: string; state?: string };
+  ticketNumber: string;
+  ticketType: string;
+  gatesOpen?: string;
+}
+
 export default function UpcomingTicketsPage() {
-  const currentUser = useQuery(api.users.queries.getCurrentUser);
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   // Mock data - will be replaced with actual Convex query
-  const tickets: any[] = [];
+  const tickets: UpcomingTicket[] = [];
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -30,7 +44,8 @@ export default function UpcomingTicketsPage() {
   };
 
   const getDaysUntil = (timestamp: number) => {
-    const days = Math.ceil((timestamp - Date.now()) / (1000 * 60 * 60 * 24));
+    if (now === null) return "";
+    const days = Math.ceil((timestamp - now) / (1000 * 60 * 60 * 24));
     if (days === 0) return "Today";
     if (days === 1) return "Tomorrow";
     return `In ${days} days`;
@@ -69,7 +84,7 @@ export default function UpcomingTicketsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {tickets.map((ticket: any) => (
+          {tickets.map((ticket) => (
             <Card key={ticket.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row gap-6">

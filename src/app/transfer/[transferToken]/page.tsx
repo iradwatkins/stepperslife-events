@@ -43,10 +43,10 @@ export default function TransferAcceptancePage() {
       setTimeout(() => {
         router.push("/my-tickets");
       }, 3000);
-    } catch (error: any) {
+    } catch (error) {
       setAcceptanceResult({
         success: false,
-        message: error.message || "Failed to accept transfer",
+        message: error instanceof Error ? error.message : "Failed to accept transfer",
       });
     } finally {
       setIsAccepting(false);

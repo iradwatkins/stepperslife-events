@@ -29,6 +29,26 @@ import { FirstEventCongratsModal } from "@/components/organizer/FirstEventCongra
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
+// Type for tier data from Convex query (database format - prices/dates are numbers)
+interface TicketTierData {
+  _id: Id<"ticketTiers">;
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  sold?: number;
+  isTablePackage?: boolean;
+  tableCapacity?: number;
+  saleStart?: number;
+  saleEnd?: number;
+  pricingTiers?: Array<{
+    name: string;
+    price: number;
+    availableFrom: number;
+    availableUntil?: number;
+  }>;
+}
+
 export default function TicketTiersPage() {
   const params = useParams();
   const router = useRouter();
@@ -157,13 +177,13 @@ export default function TicketTiersPage() {
       setNewTiers([]);
       setShowAddTier(false);
       toast.success("Ticket tier created successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Create tier error:", error);
-      toast.error(error.message || "Failed to create ticket tier");
+      toast.error(error instanceof Error ? error.message : "Failed to create ticket tier");
     }
   };
 
-  const handleEditTier = (tier: any) => {
+  const handleEditTier = (tier: TicketTierData) => {
     setEditingTier(tier._id);
 
     // Convert database tier to simplified editor format
@@ -176,8 +196,14 @@ export default function TicketTiersPage() {
       // Simple table package support
       isTablePackage: tier.isTablePackage,
       seatsPerTable: tier.tableCapacity,
-      // Early bird pricing support
-      pricingTiers: tier.pricingTiers,
+      // Early bird pricing support - convert from database format (numbers) to editor format (strings with id)
+      pricingTiers: tier.pricingTiers?.map((pt, index) => ({
+        id: `pricing-${tier._id}-${index}`,
+        name: pt.name,
+        price: (pt.price / 100).toString(),
+        availableFrom: new Date(pt.availableFrom).toISOString().split("T")[0],
+        availableUntil: pt.availableUntil ? new Date(pt.availableUntil).toISOString().split("T")[0] : undefined,
+      })),
     };
 
     setEditTierData([editorTier]);
@@ -221,9 +247,9 @@ export default function TicketTiersPage() {
       setEditingTier(null);
       setShowEditTier(false);
       toast.success("Ticket tier updated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update tier error:", error);
-      toast.error(error.message || "Failed to update ticket tier");
+      toast.error(error instanceof Error ? error.message : "Failed to update ticket tier");
     }
   };
 
@@ -239,9 +265,9 @@ export default function TicketTiersPage() {
           await deleteTier({ tierId });
           setTierToDelete(null);
           toast.success("Ticket tier deleted successfully!");
-        } catch (error: any) {
+        } catch (error) {
           console.error("Delete tier error:", error);
-          toast.error(error.message || "Failed to delete ticket tier");
+          toast.error(error instanceof Error ? error.message : "Failed to delete ticket tier");
         }
       },
     });
@@ -269,9 +295,9 @@ export default function TicketTiersPage() {
       setDuplicatingTierId(null);
       setDuplicateNewName("");
       toast.success("Ticket tier duplicated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Duplicate tier error:", error);
-      toast.error(error.message || "Failed to duplicate ticket tier");
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate ticket tier");
     } finally {
       setIsDuplicating(false);
     }

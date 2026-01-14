@@ -8,7 +8,7 @@
 import { internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { Doc } from "../_generated/dataModel";
+import { Doc, Id } from "../_generated/dataModel";
 
 // Get classes/events starting in the next 24 hours that haven't been reminded
 export const getUpcomingClassesForReminders = internalQuery({
@@ -31,7 +31,6 @@ export const getUpcomingClassesForReminders = internalQuery({
       .collect();
 
     // Get tickets for these events that haven't been reminded
-    const eventIds = upcomingEvents.map((e) => e._id);
     const tickets: Array<Doc<"tickets"> & { event: Doc<"events"> }> = [];
 
     for (const event of upcomingEvents) {
@@ -124,7 +123,7 @@ export const sendClassReminders = internalAction({
 
     const apiUrl = process.env.NEXT_PUBLIC_APP_URL || "https://stepperslife.com";
     let sentCount = 0;
-    const remindersSent: string[] = [];
+    const remindersSent: Id<"tickets">[] = [];
 
     for (const ticket of ticketsToRemind) {
       try {
@@ -244,7 +243,7 @@ export const sendClassReminders = internalAction({
     if (remindersSent.length > 0) {
       await ctx.runMutation(
         internal.notifications.classReminders.markTicketsAsReminded,
-        { ticketIds: remindersSent as any }
+        { ticketIds: remindersSent }
       );
       console.log(
         `[ClassReminders] Marked ${remindersSent.length} tickets as reminded`

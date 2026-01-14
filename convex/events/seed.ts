@@ -1,5 +1,4 @@
 import { internalMutation } from "../_generated/server";
-import { Id } from "../_generated/dataModel";
 
 /**
  * Seed test events for SteppersLife homepage

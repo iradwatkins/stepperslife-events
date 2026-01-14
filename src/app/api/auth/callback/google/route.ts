@@ -77,10 +77,11 @@ export async function GET(request: NextRequest) {
     );
 
     return response;
-  } catch (error: any) {
-    console.error("[Google OAuth] Callback error:", error.message);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Authentication failed";
+    console.error("[Google OAuth] Callback error:", errorMessage);
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, baseUrl)
+      new URL(`/login?error=${encodeURIComponent(errorMessage)}`, baseUrl)
     );
   }
 }

@@ -127,9 +127,9 @@ export function ScanFlyerButton({ onDataExtracted, onError }: ScanFlyerButtonPro
 
       onDataExtracted(formData);
       setScanProgress("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("[ScanFlyer] Error:", error);
-      onError?.(error.message || "Failed to scan flyer. Please try again.");
+      onError?.(error instanceof Error ? error.message : "Failed to scan flyer. Please try again.");
     } finally {
       setIsScanning(false);
       setScanProgress("");

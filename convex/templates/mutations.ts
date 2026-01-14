@@ -128,7 +128,17 @@ export const updateRoomTemplate = mutation({
     }
 
     // Build update object
-    const updates: any = {
+    const updates: {
+      updatedAt: number;
+      name?: string;
+      description?: string;
+      category?: "theater" | "stadium" | "concert" | "conference" | "outdoor" | "wedding" | "gala" | "banquet" | "custom";
+      seatingStyle?: "ROW_BASED" | "TABLE_BASED" | "MIXED";
+      estimatedCapacity?: number;
+      sections?: unknown[];
+      isPublic?: boolean;
+      thumbnailUrl?: string;
+    } = {
       updatedAt: Date.now(),
     };
 

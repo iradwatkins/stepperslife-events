@@ -7,9 +7,10 @@ import { mutation } from "../_generated/server";
  */
 export const createStripeConnectAccount = mutation({
   args: {
-    eventId: v.id("events"),
+    eventId: v.id("events"), // Reserved for future event-specific Stripe integration
   },
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  handler: async (ctx, _args) => {
     // PRODUCTION: Require authentication for Stripe Connect
     const identity = await ctx.auth.getUserIdentity();
 

@@ -80,8 +80,8 @@ export default function DefaultTeamPage() {
       });
 
       setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      setError(err.message || "Failed to add staff member");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add staff member");
     }
   };
 
@@ -92,8 +92,8 @@ export default function DefaultTeamPage() {
         autoAssignToNewEvents: !currentValue,
       });
       toast.success("Auto-assign setting updated");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to toggle auto-assign");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to toggle auto-assign");
     }
   };
 
@@ -101,8 +101,8 @@ export default function DefaultTeamPage() {
     try {
       await removeStaff({ staffId });
       toast.success("Staff member removed");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to remove staff member");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove staff member");
     }
   };
 

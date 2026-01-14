@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { requireAdmin } from "../lib/permissions";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
 
 /**
  * Get current user's credit balance

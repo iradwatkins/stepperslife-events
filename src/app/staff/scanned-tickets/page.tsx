@@ -7,7 +7,6 @@ import { CheckCircle, Calendar, Clock, ArrowRight, Loader2, Ticket } from "lucid
 import Link from "next/link";
 
 export default function ScannedTicketsPage() {
-  const currentUser = useQuery(api.users.queries.getCurrentUser);
   const scanData = useQuery(api.scanning.queries.getMyScannedTickets, { limit: 20 });
 
   // Loading state

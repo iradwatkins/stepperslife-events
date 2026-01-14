@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "If an account exists, a reset email will be sent",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Password Reset] Error:", error);
     return NextResponse.json(
       { error: "Failed to process password reset request" },

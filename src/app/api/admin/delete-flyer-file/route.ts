@@ -89,9 +89,10 @@ export async function POST(request: NextRequest) {
         message: "File deleted and verified successfully",
         deletedPath: fullPath,
       });
-    } catch (unlinkError: any) {
+    } catch (unlinkError) {
+      const nodeError = unlinkError as NodeJS.ErrnoException;
       // If file doesn't exist, that's okay - it's already gone
-      if (unlinkError.code === "ENOENT") {
+      if (nodeError.code === "ENOENT") {
         return NextResponse.json({
           success: true,
           message: "File already deleted or doesn't exist",

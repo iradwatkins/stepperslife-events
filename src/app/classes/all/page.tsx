@@ -42,7 +42,7 @@ export default async function ClassesAllPage() {
   const convex = new ConvexHttpClient(convexUrl);
 
   // Fetch initial data in parallel - include past classes for "All Classes" view
-  const [initialClasses, initialCategories, initialInstructors] = await Promise.all([
+  const [initialClasses, initialInstructors] = await Promise.all([
     fetchWithTimeout(
       convex.query(api.public.queries.getPublishedClasses, {
         searchTerm: undefined,
@@ -56,11 +56,6 @@ export default async function ClassesAllPage() {
       []
     ),
     fetchWithTimeout(
-      convex.query(api.public.queries.getClassCategories, {}),
-      5000,
-      []
-    ),
-    fetchWithTimeout(
       convex.query(api.public.queries.getClassInstructors, {}),
       5000,
       []
@@ -70,7 +65,6 @@ export default async function ClassesAllPage() {
   return (
     <ClassesListClient
       initialClasses={initialClasses}
-      initialCategories={initialCategories}
       initialInstructors={initialInstructors}
       showPastByDefault={true}
     />

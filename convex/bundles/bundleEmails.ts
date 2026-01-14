@@ -5,7 +5,7 @@
 
 import { v } from "convex/values";
 import { action, internalMutation } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 
 /**
@@ -159,7 +159,9 @@ export const sendBundlePurchaseConfirmation = action({
     const totalPaid = ((purchase.totalPaidCents || 0) / 100).toFixed(2);
 
     // Build ticket list HTML
-    const ticketListHtml = tickets
+    type TicketInfo = { ticketCode?: string; attendeeName?: string };
+    const ticketListHtml = (tickets as (TicketInfo | null)[])
+      .filter((t): t is TicketInfo => t !== null)
       .map(
         (t) => `
         <tr>

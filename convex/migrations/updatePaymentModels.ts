@@ -24,7 +24,7 @@ export const updatePaymentModels = mutation({
 
       if (newModel !== config.paymentModel) {
         await ctx.db.patch(config._id, {
-          paymentModel: newModel as any,
+          paymentModel: newModel as "PREPAY" | "CREDIT_CARD",
           updatedAt: Date.now(),
         });
         updated++;

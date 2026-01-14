@@ -84,7 +84,7 @@ export const resetAllData = internalMutation({
           deleted++;
         }
         results[tableName] = deleted;
-      } catch (error) {
+      } catch {
         results[tableName] = -1; // Error indicator
       }
     }

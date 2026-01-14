@@ -151,18 +151,19 @@ export async function POST(request: NextRequest) {
       applicationFeeAmount: isRealStripeAccount ? applicationFeeAmount : 0,
       vendorReceives: isRealStripeAccount ? amount - applicationFeeAmount : 0,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const stripeError = error as Error & { type?: string; code?: string; statusCode?: number; raw?: { message?: string } };
     console.error("[Stripe Product Order] Creation error:", {
-      message: error.message,
-      type: error.type,
-      code: error.code,
-      statusCode: error.statusCode,
-      raw: error.raw?.message,
+      message: stripeError.message,
+      type: stripeError.type,
+      code: stripeError.code,
+      statusCode: stripeError.statusCode,
+      raw: stripeError.raw?.message,
     });
 
     // Handle specific Stripe errors
-    if (error.type === "StripeInvalidRequestError") {
-      if (error.message?.includes("destination")) {
+    if (stripeError.type === "StripeInvalidRequestError") {
+      if (stripeError.message?.includes("destination")) {
         return NextResponse.json(
           { error: "Vendor payment account is not properly configured. Please contact support." },
           { status: 400 }
@@ -170,20 +171,20 @@ export async function POST(request: NextRequest) {
       }
       // Return the actual Stripe error for debugging
       return NextResponse.json(
-        { error: `Stripe error: ${error.message}`, code: error.code },
+        { error: `Stripe error: ${stripeError.message}`, code: stripeError.code },
         { status: 400 }
       );
     }
 
-    if (error.type === "StripeConnectionError" || error.type === "StripeAPIError") {
+    if (stripeError.type === "StripeConnectionError" || stripeError.type === "StripeAPIError") {
       return NextResponse.json(
-        { error: `Stripe connection issue: ${error.message}`, type: error.type },
+        { error: `Stripe connection issue: ${stripeError.message}`, type: stripeError.type },
         { status: 503 }
       );
     }
 
     return NextResponse.json(
-      { error: error.message || "Failed to create payment intent", type: error.type },
+      { error: stripeError.message || "Failed to create payment intent", type: stripeError.type },
       { status: 500 }
     );
   }
@@ -220,10 +221,10 @@ export async function GET(request: NextRequest) {
       applicationFeeAmount: paymentIntent.application_fee_amount,
       metadata: paymentIntent.metadata,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Stripe Product Order] Retrieval error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to retrieve payment intent" },
+      { error: error instanceof Error ? error.message : "Failed to retrieve payment intent" },
       { status: 500 }
     );
   }

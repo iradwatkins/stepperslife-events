@@ -124,7 +124,7 @@ export const getPopularItems = query({
 
     orders.forEach((order) => {
       if (order.items && Array.isArray(order.items)) {
-        order.items.forEach((item: any) => {
+        order.items.forEach((item: { menuItemId?: string; id?: string; name: string; quantity?: number; price?: number }) => {
           const id = item.menuItemId || item.id || item.name;
           if (!itemCounts[id]) {
             itemCounts[id] = { name: item.name, count: 0, revenue: 0 };

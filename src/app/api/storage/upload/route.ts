@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json();
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Storage Proxy] Error:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: error.message },
+      { error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

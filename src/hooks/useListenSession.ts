@@ -205,8 +205,10 @@ export function useListenSession({
     };
   }, []);
 
+  /* eslint-disable react-hooks/refs -- Intentionally returning ref snapshot; consumers should not rely on reactivity */
   return {
     sessionId: sessionRef.current?.sessionId || null,
     isTracking: !!sessionRef.current,
   };
+  /* eslint-enable react-hooks/refs */
 }

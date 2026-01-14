@@ -1,6 +1,15 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "../_generated/server";
-import { PRIMARY_ADMIN_EMAIL } from "../lib/roles";
+
+// Extended identity type with custom JWT claims
+interface ExtendedIdentity {
+  tokenIdentifier: string;
+  subject?: string;
+  issuer?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+}
 
 /**
  * Get the currently authenticated user from the database.
@@ -72,18 +81,21 @@ export const getIdentityDebug = query({
       return { authenticated: false, identity: null };
     }
 
+    // Cast to extended identity type for custom JWT claims
+    const extendedIdentity = identity as unknown as ExtendedIdentity;
+
     // Return all available fields from the identity
     return {
       authenticated: true,
       identity: {
         // Standard Convex identity fields
         tokenIdentifier: identity.tokenIdentifier,
-        subject: (identity as any).subject,
-        issuer: (identity as any).issuer,
+        subject: extendedIdentity.subject,
+        issuer: extendedIdentity.issuer,
         // Custom claims from our JWT
         email: identity.email,
         name: identity.name,
-        role: (identity as any).role,
+        role: extendedIdentity.role,
         // Raw object for debugging
         raw: JSON.stringify(identity),
       },
@@ -137,7 +149,8 @@ export const getUserByIdPublic = query({
     }
 
     // Don't return password hash to client
-    const { passwordHash, ...userWithoutPassword } = user;
+    const userWithoutPassword = { ...user };
+    delete (userWithoutPassword as Record<string, unknown>).passwordHash;
     return userWithoutPassword;
   },
 });
@@ -241,17 +254,7 @@ export const getPayPalAccount = query({
 export const getAdminUser = internalQuery({
   args: {},
   handler: async (ctx) => {
-    // First try to find the primary admin
-    const primaryAdmin = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", PRIMARY_ADMIN_EMAIL))
-      .first();
-
-    if (primaryAdmin) {
-      return primaryAdmin;
-    }
-
-    // Otherwise find any admin user
+    // Find any admin user
     const allUsers = await ctx.db.query("users").collect();
     return allUsers.find((u) => u.role === "admin") || null;
   },

@@ -2,14 +2,14 @@
  * Converter utilities for transforming between backend sections format and canvas items
  */
 
-import { CanvasItem, TableItem, RowSectionItem } from "./types";
+import { CanvasItem, TableItem, RowSectionItem, BackendSection, BackendTable, BackendRow, TableShape } from "./types";
 import { generateId, getTableSize } from "./utils";
 
 /**
  * Convert backend sections format to canvas items
  * Used when loading existing templates into the visual builder
  */
-export function sectionsToCanvasItems(sections: any[]): CanvasItem[] {
+export function sectionsToCanvasItems(sections: BackendSection[]): CanvasItem[] {
   const canvasItems: CanvasItem[] = [];
 
   if (!sections || sections.length === 0) {
@@ -25,14 +25,15 @@ export function sectionsToCanvasItems(sections: any[]): CanvasItem[] {
 
     // Process tables in this section
     if (section.tables && Array.isArray(section.tables)) {
-      section.tables.forEach((table: any) => {
+      section.tables.forEach((table: BackendTable) => {
+        const shape = (table.shape || "ROUND") as TableShape;
         const tableItem: TableItem = {
           id: table.id || generateId(),
           type: "TABLE",
-          shape: table.shape || "ROUND",
+          shape: shape,
           capacity: table.capacity || table.seats?.length || 8,
           position: table.position || { x: currentX, y: currentY },
-          size: getTableSize(table.shape || "ROUND", table.capacity || table.seats?.length || 8),
+          size: getTableSize(shape, table.capacity || table.seats?.length || 8),
           rotation: table.rotation || 0,
           label: table.label,
           color: section.color || "#3B82F6",
@@ -78,12 +79,12 @@ export function sectionsToCanvasItems(sections: any[]): CanvasItem[] {
  * Group consecutive rows that have the same seat count into row sections
  */
 function groupConsecutiveRows(
-  rows: any[]
-): Array<{ rows: any[]; seatsPerRow: number; label?: string }> {
+  rows: BackendRow[]
+): Array<{ rows: BackendRow[]; seatsPerRow: number; label?: string }> {
   if (!rows || rows.length === 0) return [];
 
-  const groups: Array<{ rows: any[]; seatsPerRow: number; label?: string }> = [];
-  let currentGroup: any[] = [];
+  const groups: Array<{ rows: BackendRow[]; seatsPerRow: number; label?: string }> = [];
+  let currentGroup: BackendRow[] = [];
   let currentSeatsPerRow = 0;
 
   rows.forEach((row, index) => {

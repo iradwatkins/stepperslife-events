@@ -224,14 +224,45 @@ export const autoCreateEventFromExtractedData = mutation({
       throw new Error("No extracted data available");
     }
 
-    const data = flyer.extractedData as any;
+    const data = flyer.extractedData as {
+      eventDate?: string;
+      date?: string;
+      eventTime?: string;
+      time?: string;
+      eventEndDate?: string;
+      eventEndTime?: string;
+      eventTimezone?: string;
+      city?: string;
+      state?: string;
+      venueName?: string;
+      address?: string;
+      zipCode?: string;
+      eventName?: string;
+      description?: string;
+      eventType?: string;
+      categories?: string[];
+      hostOrganizer?: string;
+      contacts?: Array<{
+        name?: string;
+        phoneNumber?: string;
+        email?: string;
+        role?: string;
+        organization?: string;
+        socialMedia?: {
+          instagram?: string;
+          facebook?: string;
+          twitter?: string;
+          tiktok?: string;
+        };
+      }>;
+    };
     const now = Date.now();
 
     // Store literal date/time values (NO CONVERSIONS - EXACTLY AS EXTRACTED)
     const eventDateLiteral = data.eventDate || data.date || undefined;
     const eventTimeLiteral = data.eventTime || data.time || undefined;
-    const eventEndDateLiteral = data.eventEndDate || undefined;
-    const eventEndTimeLiteral = data.eventEndTime || undefined;
+    // Note: eventEndDate and eventEndTime (data.eventEndDate, data.eventEndTime) are used
+    // directly in the date parsing logic below, not stored as separate literals
 
     // Determine timezone from city/state (if timezone not on flyer)
     // This ensures Chicago events get CT, Atlanta gets ET, etc.
@@ -244,14 +275,12 @@ export const autoCreateEventFromExtractedData = mutation({
 
     // Parse START date using event's timezone (not server timezone!)
     // This prevents date shifting based on where the server is located
-    let startDate: number | undefined;
-    let endDate: number | undefined;
-
-    startDate = parseEventDateTime(
+    const startDate: number | undefined = parseEventDateTime(
       data.eventDate || data.date,
       data.eventTime || data.time,
       eventTimezone
     );
+    let endDate: number | undefined;
 
     // Parse END date for weekend/multi-day events
     if (data.eventEndDate) {
@@ -519,9 +548,8 @@ export const deleteFlyerWithCleanup = action({
         const errorData = await response.json();
         console.warn(`⚠️ Failed to delete physical file: ${flyer.filepath}`, errorData);
         // Continue anyway - we still want to delete the database record
-      } else {
-        const successData = await response.json();
       }
+      // Response body consumed but not needed for success case
     } catch (error) {
       console.warn(`⚠️ Error deleting physical file:`, error);
       // Continue anyway - we still want to delete the database record
@@ -559,7 +587,7 @@ export const deleteAllFlyers = action({
   }> => {
 
     // Get all flyers
-    const flyers: Array<any> = await ctx.runQuery(api.flyers.queries.getAllFlyers, {});
+    const flyers: Array<Doc<"uploadedFlyers">> = await ctx.runQuery(api.flyers.queries.getAllFlyers, {});
 
 
     let successCount = 0;

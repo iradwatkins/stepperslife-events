@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
+// Pre-compute particle positions outside component to satisfy React purity rules
+const PARTICLES = [...Array(20)].map((_, i) => ({
+  id: i,
+  left: (i * 17 + 7) % 100, // Deterministic pseudo-random distribution
+  top: (i * 23 + 11) % 100,
+  duration: 3 + (i % 5) * 0.4,
+  delay: (i % 7) * 0.3,
+}));
+
 export function HeroSection() {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -129,22 +138,22 @@ export function HeroSection() {
 
       {/* Animated Particles/Dots Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {PARTICLES.map((particle) => (
           <motion.div
-            key={i}
+            key={particle.id}
             className="absolute w-1 h-1 bg-white/20 rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${particle.left}%`,
+              top: `${particle.top}%`,
             }}
             animate={{
               y: [0, -30, 0],
               opacity: [0.2, 0.5, 0.2],
             }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: particle.duration,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: particle.delay,
               ease: "easeInOut",
             }}
           />

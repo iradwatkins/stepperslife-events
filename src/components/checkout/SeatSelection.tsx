@@ -25,6 +25,21 @@ export interface SelectedSeat {
   seatNumber: string;
 }
 
+// Seat type for table/row seats
+interface Seat {
+  id: string;
+  number: string;
+  status: "AVAILABLE" | "RESERVED" | "BLOCKED" | "UNAVAILABLE";
+  type?: "STANDARD" | "WHEELCHAIR" | "COMPANION" | "VIP" | "BLOCKED" | "STANDING" | "PARKING" | "TENT";
+  sessionId?: string;
+  sessionExpiry?: number;
+  position?: {
+    angle?: number;
+    side?: string;
+    offset?: number;
+  };
+}
+
 export default function SeatSelection({
   eventId,
   ticketTierId,
@@ -143,7 +158,7 @@ export default function SeatSelection({
     sectionName: string,
     tableId: string,
     tableNumber: string | number,
-    seats: any[]
+    seats: Seat[]
   ) => {
     const availableSeats = seats.filter((s) => s.status === "AVAILABLE");
 
@@ -178,7 +193,7 @@ export default function SeatSelection({
   };
 
   // Check if entire table is selected
-  const isEntireTableSelected = (sectionId: string, tableId: string, seats: any[]) => {
+  const isEntireTableSelected = (sectionId: string, tableId: string, seats: Seat[]) => {
     const availableSeats = seats.filter((s) => s.status === "AVAILABLE");
     if (availableSeats.length === 0) return false;
 

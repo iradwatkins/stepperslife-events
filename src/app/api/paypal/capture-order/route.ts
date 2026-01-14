@@ -55,10 +55,11 @@ async function fetchWithRetry(
     }
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
 
-    if (error.name === "AbortError") {
+    const fetchError = error as Error & { name?: string };
+    if (fetchError.name === "AbortError") {
       if (retries > 0) {
         const delay = baseDelay * Math.pow(2, MAX_RETRIES - retries);
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
             console.warn("[PayPal] Failed to parse custom_id for settlement:", parseError);
           }
         }
-      } catch (convexError: any) {
+      } catch (convexError) {
         console.error("[PayPal] Failed to update order in Convex:", convexError);
         // Don't fail the response - payment was captured successfully
       }
@@ -201,10 +202,10 @@ export async function POST(request: NextRequest) {
       paypalOrderId: captureData.id,
       captureId: captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PayPal] Capture order error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to capture PayPal payment" },
+      { error: error instanceof Error ? error.message : "Failed to capture PayPal payment" },
       { status: 500 }
     );
   }

@@ -11,6 +11,15 @@ import { Id } from "../_generated/dataModel";
 // Production URL for the email API
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://stepperslife.com";
 
+// Type for food order items
+interface FoodOrderItem {
+  menuItemId: Id<"menuItems">;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+}
+
 /**
  * Send customer order confirmation email
  * Called after order is successfully created
@@ -57,7 +66,7 @@ export const sendCustomerOrderConfirmation = action({
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           customerPhone: order.customerPhone,
-          items: order.items.map((item: any) => ({
+          items: order.items.map((item: FoodOrderItem) => ({
             name: item.name,
             price: item.price,
             quantity: item.quantity,
@@ -124,9 +133,9 @@ export const sendCustomerOrderConfirmation = action({
       console.log(`[FOOD_ORDER_EMAIL] Customer confirmation sent for order ${order.orderNumber}`);
       return { success: true };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[FOOD_ORDER_EMAIL] Error sending customer confirmation:`, error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   },
 });
@@ -178,7 +187,7 @@ export const sendCustomerStatusUpdate = action({
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           customerPhone: order.customerPhone,
-          items: order.items.map((item: any) => ({
+          items: order.items.map((item: FoodOrderItem) => ({
             name: item.name,
             price: item.price,
             quantity: item.quantity,
@@ -245,9 +254,9 @@ export const sendCustomerStatusUpdate = action({
       console.log(`[FOOD_ORDER_EMAIL] Status update (${args.newStatus}) sent for order ${order.orderNumber}`);
       return { success: true };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[FOOD_ORDER_EMAIL] Error sending status update:`, error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   },
 });
@@ -302,7 +311,7 @@ export const sendRestaurantNewOrderAlert = action({
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           customerPhone: order.customerPhone,
-          items: order.items.map((item: any) => ({
+          items: order.items.map((item: FoodOrderItem) => ({
             name: item.name,
             price: item.price,
             quantity: item.quantity,
@@ -369,9 +378,9 @@ export const sendRestaurantNewOrderAlert = action({
       console.log(`[FOOD_ORDER_EMAIL] Restaurant alert sent for order ${order.orderNumber} to ${owner.email}`);
       return { success: true };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[FOOD_ORDER_EMAIL] Error sending restaurant alert:`, error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   },
 });

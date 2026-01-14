@@ -1,4 +1,5 @@
 import { mutation } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 // Comprehensive marketplace seed with realistic vendors, products, and sample orders
 export const seedMarketplace = mutation({
@@ -165,7 +166,7 @@ export const seedMarketplace = mutation({
     ];
 
     // Insert vendors and store IDs
-    const vendorIds: Record<string, any> = {};
+    const vendorIds: Record<string, Id<"vendors">> = {};
     for (const vendor of vendors) {
       const vendorId = await ctx.db.insert("vendors", vendor);
       vendorIds[vendor.slug] = vendorId;

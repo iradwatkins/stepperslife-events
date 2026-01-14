@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
   validatePrice,
@@ -15,16 +15,19 @@ import {
 
 // Helper to verify restaurant ownership
 async function verifyRestaurantOwnership(
-  ctx: { db: any; auth: any },
+  ctx: Pick<QueryCtx | MutationCtx, "db" | "auth">,
   restaurantId: Id<"restaurants">
 ): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return false;
 
+  const email = identity.email;
+  if (!email) return false;
+
   // Get user by email from identity
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q: any) => q.eq("email", identity.email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .first();
 
   if (!user) return false;

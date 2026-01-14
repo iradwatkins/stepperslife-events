@@ -33,6 +33,18 @@ interface Table {
   }>;
 }
 
+interface Row {
+  id: string;
+  label?: string;
+  rowNumber?: number;
+  seats?: Array<{
+    id: string;
+    number: string;
+    type: string;
+    status: string;
+  }>;
+}
+
 interface Section {
   id: string;
   name: string;
@@ -43,15 +55,20 @@ interface Section {
   height?: number;
   rotation?: number;
   containerType?: "ROWS" | "TABLES";
-  rows?: any[];
+  rows?: Row[];
   tables?: Table[];
 }
 
 type PropertiesTarget = { type: "table"; data: Table } | { type: "section"; data: Section } | null;
 
+// Update types for table and section properties
+type TableUpdates = Partial<Table>;
+type SectionUpdates = Partial<Section>;
+type PropertiesUpdates = TableUpdates | SectionUpdates;
+
 interface PropertiesPanelProps {
   target: PropertiesTarget;
-  onUpdate: (updates: any) => void;
+  onUpdate: (updates: PropertiesUpdates) => void;
   onDelete: () => void;
   onClose: () => void;
 }

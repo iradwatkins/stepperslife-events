@@ -9,7 +9,7 @@ export interface PricingTier {
   name: string;
   price: string;
   availableFrom: string; // ISO date string
-  availableUntil: string; // ISO date string (optional)
+  availableUntil?: string; // ISO date string (optional for last tier)
 }
 
 interface PricingTierFormProps {

@@ -60,12 +60,12 @@ export const processStripeRefund = internalAction({
         status: refund.status,
         amountRefunded: refund.amount,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Stripe Refund] Error:", error);
 
       return {
         success: false,
-        error: error?.message || "Refund processing failed",
+        error: error instanceof Error ? error.message : "Refund processing failed",
       };
     }
   },

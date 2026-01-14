@@ -61,10 +61,10 @@ function StripeConnectContent() {
       setTimeout(() => {
         router.push("/organizer/settings?stripe=connected");
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Stripe Connect] Failed to save account:", error);
       setStatus("error");
-      setErrorMessage(error.message || "Failed to save Stripe account. Please contact support.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to save Stripe account. Please contact support.");
     }
   };
 
@@ -91,10 +91,10 @@ function StripeConnectContent() {
 
       // Redirect to Stripe onboarding
       window.location.href = data.accountLinkUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Stripe Connect] Failed to create account:", error);
       setStatus("error");
-      setErrorMessage(error.message || "Failed to create Stripe Connect account.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to create Stripe Connect account.");
     }
   };
 
@@ -121,10 +121,10 @@ function StripeConnectContent() {
 
       // Redirect to Stripe onboarding
       window.location.href = data.accountLinkUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Stripe Connect] Failed to refresh account link:", error);
       setStatus("error");
-      setErrorMessage(error.message || "Failed to refresh Stripe onboarding link.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to refresh Stripe onboarding link.");
     }
   };
 

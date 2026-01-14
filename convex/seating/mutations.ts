@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, internalMutation } from "../_generated/server";
+import { Doc } from "../_generated/dataModel";
 import { requireEventOwnership } from "../lib/auth";
 
 /**
@@ -114,7 +115,7 @@ export const createSeatingChart = mutation({
   },
   handler: async (ctx, args) => {
     // Verify ownership (throws if not authorized)
-    const { user, event } = await requireEventOwnership(ctx, args.eventId);
+    await requireEventOwnership(ctx, args.eventId);
 
     // Calculate total seats (handles both rows and tables)
     let totalSeats = 0;
@@ -278,9 +279,9 @@ export const updateSeatingChart = mutation({
     if (!seatingChart) throw new Error("Seating chart not found");
 
     // Verify ownership (throws if not authorized)
-    const { user, event } = await requireEventOwnership(ctx, seatingChart.eventId);
+    await requireEventOwnership(ctx, seatingChart.eventId);
 
-    const updates: any = {
+    const updates: Partial<Doc<"seatingCharts">> = {
       updatedAt: Date.now(),
     };
 
@@ -339,7 +340,7 @@ export const deleteSeatingChart = mutation({
     if (!seatingChart) throw new Error("Seating chart not found");
 
     // Verify ownership (throws if not authorized)
-    const { user, event } = await requireEventOwnership(ctx, seatingChart.eventId);
+    await requireEventOwnership(ctx, seatingChart.eventId);
 
     // Check if there are any reservations
     const reservations = await ctx.db
@@ -597,7 +598,10 @@ export const releaseSessionHolds = mutation({
 
               // Release if it belongs to this session
               if (seat.sessionId === args.sessionId) {
-                const { sessionId, sessionExpiry, ...rest } = seat;
+                // Remove session fields and mark as available
+                const rest = { ...seat };
+                delete (rest as Record<string, unknown>).sessionId;
+                delete (rest as Record<string, unknown>).sessionExpiry;
                 return { ...rest, status: "AVAILABLE" as const };
               }
 
@@ -646,7 +650,10 @@ export const cleanupExpiredSessionHolds = mutation({
               // Check if this seat has an expired session hold
               if (seat.sessionId && seat.sessionExpiry && seat.sessionExpiry < now) {
                 cleanedCount++;
-                const { sessionId, sessionExpiry, ...rest } = seat;
+                // Remove session fields and mark as available
+                const rest = { ...seat };
+                delete (rest as Record<string, unknown>).sessionId;
+                delete (rest as Record<string, unknown>).sessionExpiry;
                 return { ...rest, status: "AVAILABLE" as const };
               }
 
@@ -782,7 +789,7 @@ export const linkSectionToTicketTier = internalMutation({
     const chart = await ctx.db.get(args.seatingChartId);
     if (!chart) throw new Error("Seating chart not found");
 
-    const updatedSections = (chart.sections || []).map((section: any) => {
+    const updatedSections = (chart.sections || []).map((section) => {
       if (section.id === args.sectionId) {
         return { ...section, ticketTierId: args.ticketTierId };
       }

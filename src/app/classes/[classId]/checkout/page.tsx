@@ -139,9 +139,9 @@ export default function ClassCheckoutPage() {
 
       setIsSuccess(true);
       toast.success("Successfully enrolled in class!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Enrollment error:", error);
-      toast.error(error.message || "Failed to complete enrollment");
+      toast.error(error instanceof Error ? error.message : "Failed to complete enrollment");
     } finally {
       setIsProcessing(false);
     }

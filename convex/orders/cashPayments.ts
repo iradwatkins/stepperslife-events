@@ -12,9 +12,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { api, internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
 
-const CASH_HOLD_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+// Cash hold duration for future implementation
+// const CASH_HOLD_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Helper: Generate 4-digit activation code
@@ -51,7 +51,7 @@ export const createCashOrder = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const holdExpiresAt = now + CASH_HOLD_DURATION;
+    // Hold duration logic available for future implementation
 
 
     // Get event

@@ -1,5 +1,19 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import type { Id } from "../_generated/dataModel";
+
+// Type for legacy product variants
+interface ProductVariant {
+  id: string;
+  name: string;
+  options: {
+    size?: string;
+    color?: string;
+  };
+  price?: number;
+  sku?: string;
+  inventoryQuantity: number;
+}
 
 /**
  * Self-hosted Convex backend URL.
@@ -151,7 +165,7 @@ export const getProductByIdSafe = query({
       // Try to get the product - cast to products table ID type
       const product = await ctx.db
         .query("products")
-        .filter((q) => q.eq(q.field("_id"), args.productId as any))
+        .filter((q) => q.eq(q.field("_id"), args.productId as Id<"products">))
         .first();
 
       if (!product) return null;
@@ -291,7 +305,7 @@ export const validateCartItems = query({
         // Try to get the product
         const product = await ctx.db
           .query("products")
-          .filter((q) => q.eq(q.field("_id"), item.productId as any))
+          .filter((q) => q.eq(q.field("_id"), item.productId as Id<"products">))
           .first();
 
         if (!product) {
@@ -319,7 +333,7 @@ export const validateCartItems = query({
         if (item.variationId) {
           const variation = await ctx.db
             .query("productVariations")
-            .filter((q) => q.eq(q.field("_id"), item.variationId as any))
+            .filter((q) => q.eq(q.field("_id"), item.variationId as Id<"productVariations">))
             .first();
 
           if (!variation) {
@@ -367,7 +381,7 @@ export const validateCartItems = query({
         // Legacy: Check inventory if tracking is enabled
         if (product.trackInventory) {
           if (item.variantId && product.variants) {
-            const variant = (product.variants as any[]).find((v: any) => v.id === item.variantId);
+            const variant = (product.variants as ProductVariant[]).find((v) => v.id === item.variantId);
             if (!variant) {
               validationResults.push({
                 productId: item.productId,
@@ -409,7 +423,7 @@ export const validateCartItems = query({
           productName: product.name,
           valid: true,
         });
-      } catch (err) {
+      } catch {
         validationResults.push({
           productId: item.productId,
           valid: false,

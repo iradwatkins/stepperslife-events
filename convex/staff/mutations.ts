@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { mutation, MutationCtx } from "../_generated/server";
 import { HIERARCHY_CONFIG, STAFF_ROLES } from "../lib/roles";
 
 /**
@@ -18,7 +18,7 @@ function generateReferralCode(name: string): string {
  * Get authenticated user - requires valid authentication
  * @throws Error if not authenticated
  */
-async function getAuthenticatedUser(ctx: any) {
+async function getAuthenticatedUser(ctx: MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
 
   // PRODUCTION: Authentication is required
@@ -26,9 +26,10 @@ async function getAuthenticatedUser(ctx: any) {
     throw new Error("Authentication required. Please sign in to continue.");
   }
 
+  const email = identity.email;
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q: any) => q.eq("email", identity.email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .first();
 
   if (!user) {

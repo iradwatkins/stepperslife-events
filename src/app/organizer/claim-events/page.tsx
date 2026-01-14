@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Search, Calendar, MapPin, Gift, Filter, X, Clock, ChevronDown } from "lucide-react";
+import { Search, Calendar, MapPin, Gift, Filter, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { toast } from "sonner";
 import { formatEventDate } from "@/lib/date-format";
 import debounce from "lodash/debounce";
@@ -34,10 +35,11 @@ export default function ClaimEventsPage() {
   const claimEventMutation = useMutation(api.events.mutations.claimEvent);
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      setSearchTerm(value);
-    }, 300),
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchTerm(value);
+      }, 300),
     []
   );
 
@@ -57,9 +59,9 @@ export default function ClaimEventsPage() {
       toast.success("Event claimed successfully!");
       setClaimingEventId(null);
       setClaimCode("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error claiming event:", error);
-      toast.error(error.message || "Failed to claim event");
+      toast.error(error instanceof Error ? error.message : "Failed to claim event");
     }
   };
 
@@ -253,12 +255,13 @@ export default function ClaimEventsPage() {
                     className="bg-white rounded-lg shadow-md border border overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     {/* Event Image */}
-                    <div className="h-48 bg-muted">
+                    <div className="h-48 bg-muted relative">
                       {event.imageUrl ? (
-                        <img
+                        <Image
                           src={event.imageUrl}
                           alt={event.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-primary">

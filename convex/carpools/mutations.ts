@@ -114,7 +114,9 @@ export const updateCarpoolOffer = mutation({
       throw new Error("You can only edit your own carpool offers");
     }
 
-    const { carpoolId, ...updates } = args;
+    // Extract carpoolId separately since we already have it, spread rest for updates
+    const updates = { ...args };
+    delete (updates as Record<string, unknown>).carpoolId;
     const cleanUpdates: Record<string, unknown> = { updatedAt: Date.now() };
 
     // Only include defined fields

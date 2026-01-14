@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { requireAdmin } from "../lib/auth";
-import { Id } from "../_generated/dataModel";
 
 /**
  * Admin Restaurant Image Upload Mutations
@@ -279,7 +278,7 @@ export const adminBulkUpdateRestaurantImages = mutation({
     }))),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx);
 
     const restaurant = await ctx.db.get(args.restaurantId);
     if (!restaurant) {

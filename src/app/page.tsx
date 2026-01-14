@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { PublicFooter } from "@/components/layout/PublicFooter";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { HeroSection } from "@/components/home/HeroSection";
-import { EventsGrid } from "@/components/home/EventsGrid";
+import { EventsGrid, EventGridItem } from "@/components/home/EventsGrid";
 import { TodaysEventsCard } from "@/components/home/TodaysEventsCard";
 
 // Initialize Convex client for server-side data fetching
@@ -61,7 +61,7 @@ export default async function HomePage() {
 
         {/* Events Grid */}
         <Suspense fallback={<SectionSkeleton title="Upcoming Events" />}>
-          <EventsGrid events={uniqueEvents as any} />
+          <EventsGrid events={uniqueEvents as EventGridItem[]} />
         </Suspense>
       </main>
       <PublicFooter />

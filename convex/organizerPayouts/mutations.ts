@@ -95,7 +95,6 @@ export const requestPayout = mutation({
 
     // Determine payment method - first check for default in organizerPaymentMethods table
     let paymentMethod = args.paymentMethod || "stripe";
-    let paymentMethodId: string | undefined;
 
     if (!args.paymentMethod) {
       // Check for default payment method from organizer's saved methods (Story 11.1)
@@ -120,7 +119,7 @@ export const requestPayout = mutation({
             paymentMethod = "stripe";
             break;
         }
-        paymentMethodId = defaultMethod._id;
+        // Note: paymentMethodId could be used for tracking which method was selected
       } else {
         // Fall back to legacy logic using user's connected accounts
         if (user.stripeConnectedAccountId && user.stripeAccountSetupComplete) {

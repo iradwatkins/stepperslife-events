@@ -7,11 +7,25 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Plus, Edit, Trash2, Home, Briefcase } from "lucide-react";
 import Link from "next/link";
 
+interface SavedAddress {
+  id: string;
+  type: "home" | "work" | "other";
+  fullName: string;
+  street: string;
+  apartment?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone?: string;
+  isDefault: boolean;
+}
+
 export default function AddressesPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
 
   // Mock data - will be replaced with actual Convex query
-  const addresses: any[] = [];
+  const addresses: SavedAddress[] = [];
 
   const getAddressIcon = (type: string) => {
     switch (type) {
@@ -64,7 +78,7 @@ export default function AddressesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {addresses.map((address: any) => (
+          {addresses.map((address) => (
             <Card key={address.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">

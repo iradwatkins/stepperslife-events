@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { getCurrentUser, requireEventOwnership } from "../lib/auth";
+import { requireEventOwnership } from "../lib/auth";
 
 /**
  * Self-hosted Convex backend URL.

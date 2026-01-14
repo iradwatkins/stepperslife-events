@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { jwtVerify } from "jose";
 import { getJwtSecretEncoded } from "@/lib/auth/jwt-secret";
 
@@ -76,13 +77,13 @@ export async function POST(request: NextRequest) {
       message: "PayPal account connected successfully",
       merchantId: merchantIdToStore,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PayPal Connect] Error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to connect PayPal account",
+        error: error instanceof Error ? error.message : "Failed to connect PayPal account",
       },
       { status: 500 }
     );
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
 
     // Get user's PayPal status from Convex
     const user = await fetchQuery(api.users.queries.getUserById, {
-      userId: requestedUserId as any,
+      userId: requestedUserId as Id<"users">,
     });
 
     if (!user) {
@@ -143,13 +144,13 @@ export async function GET(request: NextRequest) {
       merchantId: user.paypalMerchantId || null,
       setupComplete: user.paypalAccountSetupComplete || false,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PayPal Connect] Get status error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to get PayPal account status",
+        error: error instanceof Error ? error.message : "Failed to get PayPal account status",
       },
       { status: 500 }
     );
@@ -174,13 +175,13 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "PayPal account disconnected successfully",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PayPal Connect] Disconnect error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to disconnect PayPal account",
+        error: error instanceof Error ? error.message : "Failed to disconnect PayPal account",
       },
       { status: 500 }
     );

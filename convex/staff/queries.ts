@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { Doc, Id } from "../_generated/dataModel";
 
 /**
  * Get all staff members for an event
@@ -396,7 +397,13 @@ export const getHierarchyTree = query({
       .collect();
 
     // Build hierarchy tree
-    const buildTree = (parentId: any = undefined, level: number = 1): any[] => {
+    type StaffWithHierarchy = Doc<"eventStaff"> & {
+      availableTickets: number;
+      level: number;
+      subSellers: StaffWithHierarchy[];
+    };
+
+    const buildTree = (parentId: Id<"eventStaff"> | undefined = undefined, level: number = 1): StaffWithHierarchy[] => {
       const children = allStaff.filter((s) => {
         if (parentId === undefined) {
           return s.assignedByStaffId === undefined || s.assignedByStaffId === null;
@@ -524,14 +531,14 @@ export const getSubSellerBranchSales = query({
     }
 
     // Get all descendants recursively
-    const getAllDescendants = async (staffId: any): Promise<any[]> => {
+    const getAllDescendants = async (staffId: Id<"eventStaff">): Promise<Doc<"eventStaff">[]> => {
       const directChildren = await ctx.db
         .query("eventStaff")
         .withIndex("by_assigned_by", (q) => q.eq("assignedByStaffId", staffId))
         .filter((q) => q.eq(q.field("isActive"), true))
         .collect();
 
-      let allDescendants = [...directChildren];
+      let allDescendants: Doc<"eventStaff">[] = [...directChildren];
 
       for (const child of directChildren) {
         const childDescendants = await getAllDescendants(child._id);
@@ -585,7 +592,7 @@ export const getSubSellerBranchSales = query({
  */
 export const getGlobalStaff = query({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.email) {
       throw new Error("Authentication required");
@@ -618,7 +625,7 @@ export const getGlobalStaff = query({
  */
 export const getMyGlobalSubSellers = query({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.email) {
       throw new Error("Authentication required");

@@ -7,15 +7,14 @@ import { SearchFilters } from "@/components/events/SearchFilters";
 import { ViewToggle } from "@/components/events/ViewToggle";
 import { PortfolioGrid } from "@/components/shadcn-studio/blocks/portfolio-01/portfolio-01";
 import { MasonryEventCard } from "@/components/events/MasonryEventCard";
+import { EventCardProps, EventStatus } from "@/lib/types/events";
 
-interface Event {
-  _id: string;
-  name: string;
-  description: string;
-  location?: string | { city?: string; state?: string };
-  categories?: string[];
-  [key: string]: any;
-}
+type Event = EventCardProps & {
+  startDate?: number;
+  endDate?: number;
+  images?: string[];
+  status?: EventStatus;
+};
 
 interface HomePageContentProps {
   initialEvents: Event[];
@@ -84,7 +83,7 @@ export function HomePageContent({ initialEvents }: HomePageContentProps) {
           items={filteredEvents}
           getKey={(event) => event._id}
           renderItem={(event) => (
-            <MasonryEventCard event={event as any} />
+            <MasonryEventCard event={event} />
           )}
           emptyState={
             <div className="text-center py-16">

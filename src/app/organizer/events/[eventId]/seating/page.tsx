@@ -29,6 +29,52 @@ type SeatStatus = "AVAILABLE" | "RESERVED" | "UNAVAILABLE";
 type SeatingStyle = "ROW_BASED" | "TABLE_BASED" | "MIXED";
 type ContainerType = "ROWS" | "TABLES";
 
+// Convex-compatible types for mutation args
+type ConvexTableShape = "ROUND" | "RECTANGULAR" | "SQUARE" | "CUSTOM";
+
+interface ConvexSeat {
+  id: string;
+  number: string;
+  type: SeatType;
+  status: SeatStatus;
+}
+
+interface ConvexRow {
+  id: string;
+  label: string;
+  curved?: boolean;
+  seats: ConvexSeat[];
+}
+
+interface ConvexTable {
+  id: string;
+  number: string | number;
+  shape: ConvexTableShape;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  customPath?: string;
+  capacity: number;
+  seats: ConvexSeat[];
+}
+
+interface ConvexSection {
+  id: string;
+  name: string;
+  color?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+  containerType?: ContainerType;
+  rows?: ConvexRow[];
+  tables?: ConvexTable[];
+  ticketTierId?: Id<"ticketTiers">;
+}
+
 interface Seat {
   id: string;
   number: string;
@@ -283,7 +329,7 @@ export default function SeatingChartBuilderPage() {
           seatingChartId: existingChart._id,
           name: chartName,
           seatingStyle,
-          sections: sections as any,
+          sections: sections as ConvexSection[],
         });
         toast.success("Seating chart updated!");
       } else {
@@ -291,7 +337,7 @@ export default function SeatingChartBuilderPage() {
           eventId,
           name: chartName,
           seatingStyle,
-          sections: sections as any,
+          sections: sections as ConvexSection[],
         });
         toast.success("Seating chart created!");
       }

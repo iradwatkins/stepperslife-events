@@ -8,11 +8,25 @@ import { ShoppingCart, Trash2, Plus, Minus, Calendar, MapPin, Tag, CreditCard } 
 import Link from "next/link";
 import { useState } from "react";
 
+interface CartItem {
+  id: string;
+  quantity: number;
+  price: number;
+  eventName?: string;
+  ticketType?: string;
+  eventDate?: number;
+  location?: string | {
+    venueName?: string;
+    city?: string;
+    state?: string;
+  };
+}
+
 export default function CartPage() {
   const currentUser = useQuery(api.users.queries.getCurrentUser);
 
   // Mock data - will be replaced with actual Convex query
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const updateQuantity = (itemId: string, change: number) => {
     setCartItems(
@@ -81,16 +95,20 @@ export default function CartPage() {
                         <div>
                           <h3 className="text-lg font-semibold">{item.eventName}</h3>
                           <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              {formatDate(item.eventDate)}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              {typeof item.location === 'string'
-                                ? item.location
-                                : item.location && [item.location.venueName, item.location.city, item.location.state].filter(Boolean).join(', ')}
-                            </div>
+                            {item.eventDate && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                {formatDate(item.eventDate)}
+                              </div>
+                            )}
+                            {item.location && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                {typeof item.location === 'string'
+                                  ? item.location
+                                  : [item.location.venueName, item.location.city, item.location.state].filter(Boolean).join(', ')}
+                              </div>
+                            )}
                             {item.ticketType && (
                               <div className="flex items-center gap-2">
                                 <Tag className="h-4 w-4" />

@@ -9,6 +9,24 @@ import { QrCode, ArrowLeft, CheckCircle, XCircle, Camera, Clock, Play, Square, L
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
+import { Id } from "@/convex/_generated/dataModel";
+
+// Extend window type for debugging scanner
+declare global {
+  interface Window {
+    scanner?: QrScanner;
+  }
+}
+
+interface ScanResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  ticket?: {
+    attendeeName?: string;
+    tierName?: string;
+  };
+}
 
 export default function EventScanningPage() {
   const params = useParams();
@@ -16,7 +34,7 @@ export default function EventScanningPage() {
   const eventId = params.eventId as string;
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
-  const [lastScanResult, setLastScanResult] = useState<any>(null);
+  const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualTicketCode, setManualTicketCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -27,9 +45,9 @@ export default function EventScanningPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
-  const stats = useQuery(api.scanning.queries.getEventScanStats, { eventId: eventId as any });
+  const stats = useQuery(api.scanning.queries.getEventScanStats, { eventId: eventId as Id<"events"> });
   const recentScans = useQuery(api.scanning.queries.getRecentScans, {
-    eventId: eventId as any,
+    eventId: eventId as Id<"events">,
     limit: 10,
   });
   const scanTicket = useMutation(api.scanning.mutations.scanTicket);
@@ -84,7 +102,7 @@ export default function EventScanningPage() {
     try {
       const result = await scanTicket({
         ticketCode: ticketCode.trim(),
-        eventId: eventId as any,
+        eventId: eventId as Id<"events">,
       });
 
       setLastScanResult(result);
@@ -171,28 +189,29 @@ export default function EventScanningPage() {
 
       // Expose scanner to window for debugging
       if (typeof window !== "undefined") {
-        (window as any).scanner = scanner;
+        window.scanner = scanner;
       }
 
       setIsScanning(true);
       setIsStarting(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Scanner error:", error);
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
+      const scanError = error as Error & { name?: string };
+      console.error("Error name:", scanError.name);
+      console.error("Error message:", scanError.message);
       console.error("Full error:", error);
 
       let errorMessage = "Failed to start camera.";
 
-      if (error.name === "NotAllowedError") {
+      if (scanError.name === "NotAllowedError") {
         errorMessage =
           "Camera permission denied. Please allow camera access in your browser settings.";
-      } else if (error.name === "NotFoundError") {
+      } else if (scanError.name === "NotFoundError") {
         errorMessage = "No camera found on this device.";
-      } else if (error.name === "NotReadableError") {
+      } else if (scanError.name === "NotReadableError") {
         errorMessage = "Camera is already in use by another app.";
       } else {
-        errorMessage = error?.message || errorMessage;
+        errorMessage = scanError?.message || errorMessage;
       }
 
       setScannerError(errorMessage);

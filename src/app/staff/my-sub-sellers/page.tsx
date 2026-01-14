@@ -96,8 +96,8 @@ export default function MySubSellersPage() {
       });
 
       setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      setError(err.message || "Failed to add sub-seller");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add sub-seller");
     }
   };
 

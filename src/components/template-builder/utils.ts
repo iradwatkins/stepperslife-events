@@ -13,6 +13,51 @@ import {
 } from "./types";
 
 /**
+ * Generated seat format for backend conversion
+ */
+interface GeneratedSeat {
+  id: string;
+  number: number;
+  label: string;
+  status: "AVAILABLE" | "RESERVED" | "BLOCKED";
+}
+
+/**
+ * Generated table format for backend conversion
+ */
+interface GeneratedTable {
+  id: string;
+  shape: string;
+  capacity: number;
+  label?: string;
+  position: Position;
+  rotation: number;
+  seats: GeneratedSeat[];
+}
+
+/**
+ * Generated row format for backend conversion
+ */
+interface GeneratedRow {
+  id: string;
+  rowNumber: number;
+  label: string;
+  seats: GeneratedSeat[];
+}
+
+/**
+ * Generated section format for backend conversion
+ */
+export interface GeneratedSection {
+  id: string;
+  name: string;
+  color: string;
+  containerType: "MIXED" | "ROWS" | "TABLES";
+  tables?: GeneratedTable[];
+  rows?: GeneratedRow[];
+}
+
+/**
  * Generate a unique ID for canvas items
  */
 export function generateId(): string {
@@ -229,7 +274,7 @@ export function calculateTotalCapacity(items: CanvasItem[]): number {
 /**
  * Convert canvas items to sections format for backend
  */
-export function convertToSections(items: CanvasItem[], sections: Section[]): any[] {
+export function convertToSections(items: CanvasItem[], sections: Section[]): GeneratedSection[] {
   // Group items by section
   const sectionGroups = new Map<string, CanvasItem[]>();
 
@@ -288,7 +333,7 @@ export function convertToSections(items: CanvasItem[], sections: Section[]): any
 /**
  * Convert table item to backend format
  */
-function tableItemToBackendFormat(table: TableItem): any {
+function tableItemToBackendFormat(table: TableItem): GeneratedTable {
   return {
     id: table.id,
     shape: table.shape,
@@ -303,7 +348,7 @@ function tableItemToBackendFormat(table: TableItem): any {
 /**
  * Convert row section to backend format (expands into individual rows)
  */
-function rowSectionToBackendFormat(rowSection: RowSectionItem): any[] {
+function rowSectionToBackendFormat(rowSection: RowSectionItem): GeneratedRow[] {
   const rows = [];
   for (let i = 0; i < rowSection.rowCount; i++) {
     rows.push({
@@ -319,8 +364,8 @@ function rowSectionToBackendFormat(rowSection: RowSectionItem): any[] {
 /**
  * Generate seat objects for a table
  */
-function generateSeatsForTable(table: TableItem): any[] {
-  const seats = [];
+function generateSeatsForTable(table: TableItem): GeneratedSeat[] {
+  const seats: GeneratedSeat[] = [];
   for (let i = 0; i < table.capacity; i++) {
     seats.push({
       id: `${table.id}_seat_${i + 1}`,
@@ -335,8 +380,8 @@ function generateSeatsForTable(table: TableItem): any[] {
 /**
  * Generate seat objects for a row
  */
-function generateSeatsForRow(seatCount: number, rowNumber: number): any[] {
-  const seats = [];
+function generateSeatsForRow(seatCount: number, rowNumber: number): GeneratedSeat[] {
+  const seats: GeneratedSeat[] = [];
   for (let i = 0; i < seatCount; i++) {
     seats.push({
       id: `seat_r${rowNumber}_s${i + 1}`,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -13,7 +14,6 @@ import {
   Check,
   Plus,
   ArrowRight,
-  Users,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatEventDate } from "@/lib/date-format";
@@ -30,6 +30,9 @@ export default function OrganizerDashboardPage() {
 
   const isLoading = events === undefined || credits === undefined || earnings === undefined;
 
+  // Store current time in state to avoid calling impure function during render
+  const [now] = useState(() => Date.now());
+
   // Calculate dashboard statistics
   const totalTicketsAllocated =
     events?.reduce((sum, event) => sum + (event.totalTickets || 0), 0) || 0;
@@ -39,7 +42,7 @@ export default function OrganizerDashboardPage() {
 
   // Get upcoming events
   const upcomingEvents =
-    events?.filter((event) => event.startDate && event.startDate > Date.now()).slice(0, 3) || [];
+    events?.filter((event) => event.startDate && event.startDate > now).slice(0, 3) || [];
 
   // Get recent events
   const recentEvents = events?.slice(0, 5) || [];
@@ -336,7 +339,7 @@ export default function OrganizerDashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-semibold text-foreground mb-1 truncate">{event.name}</h3>
-                          {event.startDate && event.startDate > Date.now() && (
+                          {event.startDate && event.startDate > now && (
                             <span className="px-2 py-1 text-xs font-semibold bg-success/10 text-success rounded-full flex-shrink-0">
                               Upcoming
                             </span>

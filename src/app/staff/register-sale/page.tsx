@@ -8,6 +8,13 @@ import { Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, DollarSign, CheckCircle2, Ticket, CreditCard, Wallet, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
+// Type for staff position event with eventType
+interface StaffPositionEvent {
+  _id: Id<"events">;
+  name: string;
+  eventType?: string;
+}
+
 export default function RegisterSalePage() {
   const [selectedStaffId, setSelectedStaffId] = useState<Id<"eventStaff"> | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
@@ -64,9 +71,9 @@ export default function RegisterSalePage() {
 
       setSuccessData(result);
       setIsSuccess(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Cash sale error:", error);
-      toast.error(error.message || "Failed to register sale");
+      toast.error(error instanceof Error ? error.message : "Failed to register sale");
     }
   };
 
@@ -206,7 +213,7 @@ export default function RegisterSalePage() {
             <h3 className="font-semibold text-foreground mb-4">Select Your Position</h3>
             <div className="space-y-3">
               {staffPositions
-                .filter((p) => p.event && (p.event as any).eventType !== "CLASS")
+                .filter((p) => p.event && (p.event as StaffPositionEvent).eventType !== "CLASS")
                 .map((position) => (
                   <button
                     type="button"
@@ -229,7 +236,7 @@ export default function RegisterSalePage() {
                     </p>
                   </button>
                 ))}
-              {staffPositions.filter((p) => p.event && (p.event as any).eventType !== "CLASS").length === 0 && (
+              {staffPositions.filter((p) => p.event && (p.event as StaffPositionEvent).eventType !== "CLASS").length === 0 && (
                 <p className="text-center text-muted-foreground py-4">
                   No events available. Classes are managed separately.
                 </p>

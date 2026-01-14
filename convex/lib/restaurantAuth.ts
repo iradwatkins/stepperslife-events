@@ -10,7 +10,7 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
 import { Id, Doc } from "../_generated/dataModel";
 import { getCurrentUser } from "./auth";
-import { RESTAURANT_STAFF_ROLES, RestaurantStaffRole } from "./roles";
+import { RestaurantStaffRole } from "./roles";
 
 /**
  * Restaurant role types (includes owner which is not a staff role)

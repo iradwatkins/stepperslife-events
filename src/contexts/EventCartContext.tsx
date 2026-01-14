@@ -1,7 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { Id } from "@/convex/_generated/dataModel";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 /**
  * EventCartContext - Unified cart for event purchases
@@ -111,19 +110,21 @@ const EventCartContext = createContext<EventCartContextType | undefined>(undefin
 
 const STORAGE_KEY_PREFIX = "event_cart_";
 
-export function EventCartProvider({ children }: { children: React.ReactNode }) {
+export function EventCartProvider({ children }: { children: ReactNode }) {
   const [eventId, setEventIdState] = useState<string | null>(null);
   const [items, setItems] = useState<EventCartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load cart from sessionStorage when eventId changes
+  // This synchronizes React state with sessionStorage (external system)
   useEffect(() => {
     if (eventId) {
       const key = `${STORAGE_KEY_PREFIX}${eventId}`;
       const saved = sessionStorage.getItem(key);
       if (saved) {
         try {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setItems(JSON.parse(saved));
         } catch (error) {
           console.error("Failed to load event cart:", error);

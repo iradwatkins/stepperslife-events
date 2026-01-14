@@ -22,12 +22,13 @@ import {
   convertToSections,
   calculateRowSectionSize,
   generateId,
+  GeneratedSection,
 } from "./utils";
 import { toast } from "sonner";
 
 interface TemplateBuilderProps {
   initialItems?: CanvasItem[];
-  onSave?: (sections: any[], totalCapacity: number) => void;
+  onSave?: (sections: GeneratedSection[], totalCapacity: number) => void;
   onCancel?: () => void;
 }
 

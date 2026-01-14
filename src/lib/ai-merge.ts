@@ -173,7 +173,7 @@ function getMajorityValue(
   });
 
   // Count occurrences
-  const valueCounts = new Map<string, { original: any; count: number }>();
+  const valueCounts = new Map<string, { original: ExtractedDataValue; count: number }>();
   values.forEach((originalValue, index) => {
     if (originalValue === null || originalValue === undefined) return;
 

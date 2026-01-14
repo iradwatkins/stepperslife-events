@@ -70,10 +70,11 @@ export function PayPalAccountConnect({
       toast.success("PayPal account connected successfully!");
       setPaypalEmail("");
       onConnected?.();
-    } catch (err: any) {
+    } catch (err) {
       console.error("PayPal connect error:", err);
-      setError(err.message || "Failed to connect PayPal account");
-      toast.error(err.message || "Failed to connect PayPal account");
+      const errorMessage = err instanceof Error ? err.message : "Failed to connect PayPal account";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsConnecting(false);
     }
@@ -100,9 +101,9 @@ export function PayPalAccountConnect({
       }
 
       toast.success("PayPal account disconnected");
-    } catch (err: any) {
+    } catch (err) {
       console.error("PayPal disconnect error:", err);
-      toast.error(err.message || "Failed to disconnect PayPal account");
+      toast.error(err instanceof Error ? err.message : "Failed to disconnect PayPal account");
     } finally {
       setIsDisconnecting(false);
     }

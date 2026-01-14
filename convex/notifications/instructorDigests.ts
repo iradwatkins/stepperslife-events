@@ -7,6 +7,7 @@
 import { internalAction, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 
 // Get all instructors (users with role="organizer" or who have events)
 export const getInstructorsWithActivity = internalQuery({
@@ -209,7 +210,7 @@ export const sendDailyDigests = internalAction({
         // Get upcoming classes
         const upcomingClasses = await ctx.runQuery(
           internal.notifications.instructorDigests.getInstructorUpcomingClasses,
-          { organizerId: instructor.instructorId as any }
+          { organizerId: instructor.instructorId as Id<"users"> }
         );
 
         // Calculate summary

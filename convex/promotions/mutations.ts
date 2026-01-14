@@ -9,7 +9,8 @@ const PROMOTION_DURATIONS: Record<string, number> = {
   SEARCH_BOOST: 14, // 14 days search boost
 };
 
-type PromotionType = "FEATURED" | "HOMEPAGE" | "CATEGORY" | "SEARCH_BOOST";
+// Type definition for internal reference
+// type PromotionType = "FEATURED" | "HOMEPAGE" | "CATEGORY" | "SEARCH_BOOST";
 
 /**
  * Create a pending promotion (before payment)

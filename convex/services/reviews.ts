@@ -1,5 +1,6 @@
-import { query, mutation } from "../_generated/server";
+import { query, mutation, MutationCtx } from "../_generated/server";
 import { v } from "convex/values";
+import { Id, Doc } from "../_generated/dataModel";
 
 // ========================================
 // SERVICE REVIEWS - Queries
@@ -427,12 +428,12 @@ export const respondToReview = mutation({
  * Update provider's average rating based on all approved reviews
  */
 async function updateProviderRating(
-  ctx: { db: any },
-  providerId: any
+  ctx: Pick<MutationCtx, "db">,
+  providerId: Id<"serviceProviders">
 ) {
   const reviews = await ctx.db
     .query("serviceReviews")
-    .withIndex("by_provider", (q: any) =>
+    .withIndex("by_provider", (q) =>
       q.eq("serviceProviderId", providerId).eq("status", "APPROVED")
     )
     .collect();
@@ -446,7 +447,7 @@ async function updateProviderRating(
     return;
   }
 
-  const sum = reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+  const sum = reviews.reduce((acc: number, r: Doc<"serviceReviews">) => acc + r.rating, 0);
   const avg = sum / reviews.length;
 
   await ctx.db.patch(providerId, {

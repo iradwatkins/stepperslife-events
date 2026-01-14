@@ -18,10 +18,15 @@ import { logger, securityLogger } from "@/lib/logging/logger";
 
 // Email verification API - dynamically accessed (module may not exist)
 // These mutations may not exist if the email verification module isn't set up
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const emailVerificationApi = (api as any).emailVerification?.mutations as
-  | Record<string, any>
-  | undefined;
+import type { FunctionReference } from "convex/server";
+type EmailVerificationMutations = Record<string, FunctionReference<"mutation">>;
+type ConvexApiWithEmailVerification = {
+  emailVerification?: {
+    mutations?: EmailVerificationMutations;
+  };
+};
+const emailVerificationApi = (api as unknown as ConvexApiWithEmailVerification)
+  .emailVerification?.mutations;
 
 /**
  * Result type for service operations

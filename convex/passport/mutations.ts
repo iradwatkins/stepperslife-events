@@ -1,5 +1,6 @@
-import { mutation, internalMutation } from "../_generated/server";
+import { mutation, MutationCtx } from "../_generated/server";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 
 // Record event attendance and update passport
 export const recordAttendance = mutation({
@@ -125,11 +126,10 @@ export const recordAttendance = mutation({
 });
 
 // Helper to check and award achievements
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function checkAndAwardAchievements(
-  ctx: any,
+  ctx: MutationCtx,
   passport: {
-    _id: unknown;
+    _id: Id<"userEventPassport">;
     eventsAttended: number;
     uniqueCities: string[];
     uniqueStates: string[];

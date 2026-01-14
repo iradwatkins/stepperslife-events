@@ -62,10 +62,11 @@ async function fetchWithRetry(
     }
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
 
-    if (error.name === "AbortError") {
+    const fetchError = error as Error & { name?: string };
+    if (fetchError.name === "AbortError") {
       if (retries > 0) {
         const delay = baseDelay * Math.pow(2, MAX_RETRIES - retries);
         console.log(`[PayPal] Request timeout, retrying after ${delay}ms (${retries} retries left)`);
@@ -77,7 +78,7 @@ async function fetchWithRetry(
 
     if (retries > 0) {
       const delay = baseDelay * Math.pow(2, MAX_RETRIES - retries);
-      console.log(`[PayPal] Request failed, retrying after ${delay}ms (${retries} retries left): ${error.message}`);
+      console.log(`[PayPal] Request failed, retrying after ${delay}ms (${retries} retries left): ${fetchError.message}`);
       await new Promise((resolve) => setTimeout(resolve, delay));
       return fetchWithRetry(url, options, retries - 1, baseDelay);
     }
@@ -188,7 +189,20 @@ export async function POST(request: NextRequest) {
     const platformFeeInDollars = (totalPlatformFee / 100).toFixed(2);
 
     // Build purchase unit
-    const purchaseUnit: any = {
+    const purchaseUnit: {
+      reference_id: string;
+      description: string;
+      amount: { currency_code: string; value: string };
+      custom_id: string;
+      payee?: { merchant_id?: string; email_address?: string };
+      payment_instruction?: {
+        disbursement_mode: string;
+        platform_fees: Array<{
+          amount: { currency_code: string; value: string };
+          payee: { merchant_id: string };
+        }>;
+      };
+    } = {
       reference_id: orderId || `order_${Date.now()}`,
       description: description || "SteppersLife Purchase",
       amount: {
@@ -274,31 +288,32 @@ export async function POST(request: NextRequest) {
       orderId: orderData.id,
       status: orderData.status,
     });
-  } catch (error: any) {
-    console.error("[PayPal] Create order error:", error.message);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[PayPal] Create order error:", errorMessage);
 
     // Generate unique request ID for debugging
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Determine error type and message
     let errorCode = "INTERNAL_ERROR";
-    let errorMessage = "Failed to create PayPal order";
+    let userMessage = "Failed to create PayPal order";
 
-    if (error.message?.includes("credentials")) {
+    if (errorMessage.includes("credentials")) {
       errorCode = "PAYPAL_NOT_CONFIGURED";
-      errorMessage = "PayPal payment is temporarily unavailable";
-    } else if (error.message?.includes("timeout")) {
+      userMessage = "PayPal payment is temporarily unavailable";
+    } else if (errorMessage.includes("timeout")) {
       errorCode = "PAYPAL_TIMEOUT";
-      errorMessage = "PayPal service timed out. Please try again.";
-    } else if (error.message?.includes("access token")) {
+      userMessage = "PayPal service timed out. Please try again.";
+    } else if (errorMessage.includes("access token")) {
       errorCode = "PAYPAL_AUTH_FAILED";
-      errorMessage = "Unable to authenticate with PayPal";
+      userMessage = "Unable to authenticate with PayPal";
     }
 
     // In development or if debug flag is set, include more details
     const isDev = process.env.NODE_ENV === "development";
     const debugInfo = isDev ? {
-      message: error.message,
+      message: errorMessage,
       env: PAYPAL_API_BASE,
       hasClientId: !!PAYPAL_CLIENT_ID,
       hasSecretKey: !!PAYPAL_CLIENT_SECRET,
@@ -307,7 +322,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: errorMessage,
+        error: userMessage,
         details: {
           code: errorCode,
           requestId,

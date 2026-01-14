@@ -22,6 +22,20 @@ import {
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Id } from "@/convex/_generated/dataModel";
+
+interface ScanResult {
+  success: boolean;
+  error?: string;
+  message?: string;
+  ticket?: {
+    ticketCode?: string;
+    scannedAt?: number;
+    attendeeName?: string;
+    attendeeEmail?: string;
+    tierName?: string;
+  };
+}
 
 // Utility function to find "current" event (happening now or starting soon)
 function findCurrentEvent(
@@ -60,7 +74,7 @@ export default function StaffScanTicketsPage() {
   // Scanner state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [autoSelectedEventId, setAutoSelectedEventId] = useState<string | null>(null);
-  const [lastScanResult, setLastScanResult] = useState<any>(null);
+  const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualTicketCode, setManualTicketCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -73,11 +87,11 @@ export default function StaffScanTicketsPage() {
 
   const stats = useQuery(
     api.scanning.queries.getEventScanStats,
-    selectedEventId ? { eventId: selectedEventId as any } : "skip"
+    selectedEventId ? { eventId: selectedEventId as Id<"events"> } : "skip"
   );
   const recentScans = useQuery(
     api.scanning.queries.getRecentScans,
-    selectedEventId ? { eventId: selectedEventId as any, limit: 10 } : "skip"
+    selectedEventId ? { eventId: selectedEventId as Id<"events">, limit: 10 } : "skip"
   );
   const scanTicket = useMutation(api.scanning.mutations.scanTicket);
 
@@ -91,7 +105,7 @@ export default function StaffScanTicketsPage() {
     try {
       const result = await scanTicket({
         ticketCode: ticketCode.trim(),
-        eventId: selectedEventId as any,
+        eventId: selectedEventId as Id<"events">,
       });
 
       setLastScanResult(result);
@@ -158,16 +172,17 @@ export default function StaffScanTicketsPage() {
       scannerRef.current = scanner;
       setIsScanning(true);
       setIsStarting(false);
-    } catch (error: any) {
+    } catch (error) {
+      const cameraError = error as Error & { name?: string };
       let errorMessage = "Failed to start camera.";
-      if (error.name === "NotAllowedError") {
+      if (cameraError.name === "NotAllowedError") {
         errorMessage = "Camera permission denied. Please allow camera access.";
-      } else if (error.name === "NotFoundError") {
+      } else if (cameraError.name === "NotFoundError") {
         errorMessage = "No camera found on this device.";
-      } else if (error.name === "NotReadableError") {
+      } else if (cameraError.name === "NotReadableError") {
         errorMessage = "Camera is already in use.";
       } else {
-        errorMessage = error?.message || errorMessage;
+        errorMessage = cameraError?.message || errorMessage;
       }
       setScannerError(errorMessage);
       setIsScanning(false);
@@ -493,8 +508,8 @@ export default function StaffScanTicketsPage() {
             <p className="text-white text-lg mb-4">{lastScanResult.message}</p>
             {lastScanResult.ticket && (
               <div className="bg-white/20 rounded-xl p-4 text-white">
-                <p className="text-xl font-bold">{lastScanResult.ticket.attendeeName}</p>
-                <p>{lastScanResult.ticket.tierName}</p>
+                <p className="text-xl font-bold">{lastScanResult.ticket.attendeeName || "Guest"}</p>
+                <p>{lastScanResult.ticket.tierName || ""}</p>
               </div>
             )}
           </div>

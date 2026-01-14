@@ -28,10 +28,10 @@ export const listRoomTemplates = query({
 
     // Filter by category if specified
     if (args.category && args.category !== "all") {
-      const category = args.category;
+      const category = args.category as "theater" | "stadium" | "concert" | "conference" | "outdoor" | "wedding" | "gala" | "banquet" | "custom";
       allTemplates = await ctx.db
         .query("roomTemplates")
-        .withIndex("by_category", (q) => q.eq("category", category as any))
+        .withIndex("by_category", (q) => q.eq("category", category))
         .collect();
     } else {
       allTemplates = await ctx.db.query("roomTemplates").collect();

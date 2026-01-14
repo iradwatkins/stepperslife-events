@@ -692,7 +692,7 @@ export const updateProductOption = mutation({
       displayOrder: v.optional(v.number()),
     }),
   },
-  handler: async (ctx, args) => {
+  handler: async () => {
     // Note: Product options are not currently supported in the schema
     // This functionality would need to be added to the schema first
     throw new Error("Product options feature is not yet implemented in the schema");
@@ -705,7 +705,7 @@ export const deleteProductOption = mutation({
     productId: v.id("products"),
     optionId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async () => {
     // Note: Product options are not currently supported in the schema
     // This functionality would need to be added to the schema first
     throw new Error("Product options feature is not yet implemented in the schema");
@@ -718,7 +718,7 @@ export const reorderProductOptions = mutation({
     productId: v.id("products"),
     optionIds: v.array(v.string()), // Array of option IDs in new order
   },
-  handler: async (ctx, args) => {
+  handler: async () => {
     // Note: Product options are not currently supported in the schema
     // This functionality would need to be added to the schema first
     throw new Error("Product options feature is not yet implemented in the schema");

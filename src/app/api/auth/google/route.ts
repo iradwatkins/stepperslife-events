@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     const googleAuthUrl = getGoogleAuthUrl(encryptedState);
 
     return NextResponse.redirect(googleAuthUrl);
-  } catch (error: any) {
-    console.error("[Google OAuth] Initiation error:", error.message);
+  } catch (error) {
+    console.error("[Google OAuth] Initiation error:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Failed to initiate Google OAuth" }, { status: 500 });
   }
 }

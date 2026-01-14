@@ -34,12 +34,10 @@ interface PurchaseCreditsModalProps {
 // Inner component that uses Stripe hooks (must be inside Elements provider)
 function CreditPurchaseForm({
   selectedPackage,
-  userId,
   onSuccess,
   onClose,
 }: {
   selectedPackage: Package;
-  userId: string;
   onSuccess: () => void;
   onClose: () => void;
 }) {
@@ -82,9 +80,9 @@ function CreditPurchaseForm({
         onSuccess();
         onClose();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Payment error:", err);
-      setError(err.message || "An error occurred. Please try again.");
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -302,7 +300,6 @@ export function PurchaseCreditsModal({ onClose, onSuccess }: PurchaseCreditsModa
           >
             <CreditPurchaseForm
               selectedPackage={selectedPackage}
-              userId={userId}
               onSuccess={onSuccess}
               onClose={onClose}
             />
