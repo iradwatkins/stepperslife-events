@@ -137,12 +137,26 @@ export async function POST(request: NextRequest) {
 
       // Subscription lifecycle events
       case "customer.subscription.created":
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription,
+          event.id,
+          "subscription_created"
+        );
+        break;
+
       case "customer.subscription.updated":
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription,
+          event.id,
+          "subscription_updated"
+        );
         break;
 
       case "customer.subscription.deleted":
-        await handleSubscriptionCancelled(event.data.object as Stripe.Subscription);
+        await handleSubscriptionCancelled(
+          event.data.object as Stripe.Subscription,
+          event.id
+        );
         break;
 
       case "invoice.payment_failed":
@@ -654,24 +668,24 @@ async function getOrderDetailsForRefundEmail(paymentIntentId: string): Promise<{
 /**
  * Handle subscription creation or update
  * Syncs subscription status from Stripe to Convex
+ * Also updates user's premium tier for quick access
  */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+  eventId: string,
+  reason: "subscription_created" | "subscription_updated"
+) {
   const stripeSubscriptionId = subscription.id;
   const stripeCustomerId = subscription.customer as string;
   const userId = subscription.metadata?.userId;
+  const priceId = subscription.items.data[0]?.price.id;
 
   console.log(`[Stripe Webhook] Subscription ${subscription.status}: ${stripeSubscriptionId}`);
-
-  if (!userId) {
-    console.warn(`[Stripe Webhook] No userId in subscription metadata for ${stripeSubscriptionId}`);
-    return;
-  }
 
   try {
     // Map Stripe subscription status to plan activation
     if (subscription.status === "active" || subscription.status === "trialing") {
       // Get plan from price metadata or default to BASIC
-      const priceId = subscription.items.data[0]?.price.id;
       const planFromMetadata = subscription.metadata?.plan || "BASIC";
 
       type ValidPlan = "FREE" | "BASIC" | "PRO" | "ENTERPRISE";
@@ -684,18 +698,47 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         PRO: "PRO",
         ENTERPRISE: "ENTERPRISE",
         FREE: "FREE",
+        starter: "BASIC", // Map starter to BASIC for legacy subscriptions table
       };
       const plan: ValidPlan = planMap[planFromMetadata] || "BASIC";
 
-      await convex.mutation(api.subscriptions.mutations.activateSubscription, {
-        userId: userId as Id<"users">,
-        plan,
-        stripeSubscriptionId,
-        stripeCustomerId,
-        stripePriceId: priceId,
-      });
+      // Update legacy subscriptions table (if userId available)
+      if (userId) {
+        await convex.mutation(api.subscriptions.mutations.activateSubscription, {
+          userId: userId as Id<"users">,
+          plan,
+          stripeSubscriptionId,
+          stripeCustomerId,
+          stripePriceId: priceId,
+        });
+        console.log(`[Stripe Webhook] Subscription activated for user ${userId}: ${plan}`);
+      }
 
-      console.log(`[Stripe Webhook] Subscription activated for user ${userId}: ${plan}`);
+      // Update user's premium tier (Story 13.2)
+      // Map price ID to lowercase tier for the new premiumTier system
+      const tierFromPrice = mapPriceIdToTier(priceId);
+
+      // Access subscription fields with type assertion for newer Stripe API versions
+      const subscriptionData = subscription as unknown as {
+        current_period_end: number;
+        cancel_at_period_end: boolean;
+      };
+
+      try {
+        await convex.mutation(api.users.mutations.updatePremiumTier, {
+          stripeCustomerId,
+          tier: tierFromPrice,
+          stripeSubscriptionId,
+          currentPeriodEnd: subscriptionData.current_period_end * 1000, // Convert to milliseconds
+          cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
+          reason,
+          stripeEventId: eventId,
+        });
+        console.log(`[Stripe Webhook] Premium tier updated: ${tierFromPrice} for customer ${stripeCustomerId}`);
+      } catch (tierError: unknown) {
+        // Log but don't fail the webhook if premium tier update fails
+        console.error(`[Stripe Webhook] Failed to update premium tier:`, getErrorMessage(tierError));
+      }
     } else if (subscription.status === "past_due") {
       await convex.mutation(api.subscriptions.mutations.handlePaymentFailed, {
         stripeSubscriptionId,
@@ -708,20 +751,61 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 /**
- * Handle subscription cancellation
+ * Map Stripe price ID to premium tier
+ * Falls back to metadata-based mapping if price ID not in mapping table
  */
-async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
+function mapPriceIdToTier(priceId: string | undefined): "free" | "starter" | "pro" | "enterprise" {
+  if (!priceId) return "free";
+
+  // Check known price ID patterns
+  const priceLower = priceId.toLowerCase();
+
+  if (priceLower.includes("enterprise")) return "enterprise";
+  if (priceLower.includes("pro")) return "pro";
+  if (priceLower.includes("starter") || priceLower.includes("basic")) return "starter";
+
+  // Default to starter for any paid subscription
+  return "starter";
+}
+
+/**
+ * Handle subscription cancellation
+ * Reverts user to free tier and logs the change
+ */
+async function handleSubscriptionCancelled(
+  subscription: Stripe.Subscription,
+  eventId: string
+) {
   const stripeSubscriptionId = subscription.id;
+  const stripeCustomerId = subscription.customer as string;
 
   console.log(`[Stripe Webhook] Subscription cancelled: ${stripeSubscriptionId}`);
 
   try {
+    // Update legacy subscriptions table
     await convex.mutation(api.subscriptions.mutations.cancelSubscription, {
       stripeSubscriptionId,
       immediate: true,
     });
 
     console.log(`[Stripe Webhook] Subscription ${stripeSubscriptionId} cancelled in database`);
+
+    // Update user's premium tier to free (Story 13.2)
+    try {
+      await convex.mutation(api.users.mutations.updatePremiumTier, {
+        stripeCustomerId,
+        tier: "free",
+        stripeSubscriptionId: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        reason: "subscription_deleted",
+        stripeEventId: eventId,
+      });
+      console.log(`[Stripe Webhook] Premium tier reverted to free for customer ${stripeCustomerId}`);
+    } catch (tierError: unknown) {
+      // Log but don't fail the webhook if premium tier update fails
+      console.error(`[Stripe Webhook] Failed to update premium tier:`, getErrorMessage(tierError));
+    }
   } catch (error: unknown) {
     console.error(`[Stripe Webhook] Failed to cancel subscription ${stripeSubscriptionId}:`, getErrorMessage(error));
   }

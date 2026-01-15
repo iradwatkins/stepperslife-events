@@ -1070,3 +1070,198 @@ export const devUpgradeToOrganizer = mutation({
     };
   },
 });
+
+// ============================================
+// PREMIUM TIER MANAGEMENT (Story 13.2)
+// ============================================
+
+// Valid tier values (lowercase to match schema)
+const premiumTierValidator = v.union(
+  v.literal("free"),
+  v.literal("starter"),
+  v.literal("pro"),
+  v.literal("enterprise")
+);
+
+// Valid reason values for tier changes
+const tierChangeReasonValidator = v.union(
+  v.literal("subscription_created"),
+  v.literal("subscription_updated"),
+  v.literal("subscription_deleted"),
+  v.literal("subscription_expired"),
+  v.literal("manual_adjustment")
+);
+
+/**
+ * Update a user's premium tier based on Stripe subscription event
+ * Called from webhook handler when subscription status changes
+ */
+export const updatePremiumTier = mutation({
+  args: {
+    stripeCustomerId: v.string(),
+    tier: premiumTierValidator,
+    stripeSubscriptionId: v.union(v.string(), v.null()),
+    currentPeriodEnd: v.union(v.number(), v.null()),
+    cancelAtPeriodEnd: v.boolean(),
+    reason: tierChangeReasonValidator,
+    stripeEventId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Find user by Stripe customer ID
+    const users = await ctx.db.query("users").collect();
+    const user = users.find((u) => u.stripeCustomerId === args.stripeCustomerId);
+
+    if (!user) {
+      console.warn(
+        `[Premium Tier] No user found for Stripe customer: ${args.stripeCustomerId}`
+      );
+      return {
+        success: false,
+        error: "User not found for Stripe customer ID",
+      };
+    }
+
+    // Check for idempotency - has this event already been processed?
+    const existingChange = await ctx.db
+      .query("premiumTierChanges")
+      .withIndex("by_stripeEventId", (q) => q.eq("stripeEventId", args.stripeEventId))
+      .first();
+
+    if (existingChange) {
+      console.log(
+        `[Premium Tier] Event ${args.stripeEventId} already processed, skipping`
+      );
+      return {
+        success: true,
+        duplicate: true,
+      };
+    }
+
+    // Get previous tier for audit log
+    const previousTier = user.premiumTier?.tier || "free";
+
+    // Skip if tier hasn't changed (unless it's a renewal/update)
+    if (previousTier === args.tier && args.reason !== "subscription_updated") {
+      console.log(
+        `[Premium Tier] Tier unchanged for user ${user._id}: ${args.tier}`
+      );
+      return {
+        success: true,
+        unchanged: true,
+      };
+    }
+
+    // Update user's premium tier
+    await ctx.db.patch(user._id, {
+      premiumTier: {
+        tier: args.tier,
+        stripeSubscriptionId: args.stripeSubscriptionId || undefined,
+        stripeCustomerId: args.stripeCustomerId,
+        currentPeriodEnd: args.currentPeriodEnd || undefined,
+        cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+        updatedAt: now,
+      },
+      updatedAt: now,
+    });
+
+    // Create audit log entry
+    await ctx.db.insert("premiumTierChanges", {
+      userId: user._id,
+      previousTier,
+      newTier: args.tier,
+      reason: args.reason,
+      stripeEventId: args.stripeEventId,
+      stripeSubscriptionId: args.stripeSubscriptionId || undefined,
+      metadata: {
+        currentPeriodEnd: args.currentPeriodEnd,
+        cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+      },
+      createdAt: now,
+    });
+
+    console.log(
+      `[Premium Tier] Updated user ${user._id} tier: ${previousTier} -> ${args.tier} (${args.reason})`
+    );
+
+    return {
+      success: true,
+      userId: user._id,
+      previousTier,
+      newTier: args.tier,
+    };
+  },
+});
+
+/**
+ * Admin mutation to manually adjust a user's tier
+ */
+export const adminSetPremiumTier = mutation({
+  args: {
+    userId: v.id("users"),
+    tier: premiumTierValidator,
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Require admin authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) {
+      throw new Error("Authentication required");
+    }
+
+    const adminUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!adminUser || adminUser.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    const now = Date.now();
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const previousTier = user.premiumTier?.tier || "free";
+
+    // Update user's tier
+    await ctx.db.patch(args.userId, {
+      premiumTier: {
+        tier: args.tier,
+        stripeSubscriptionId: user.premiumTier?.stripeSubscriptionId,
+        stripeCustomerId: user.premiumTier?.stripeCustomerId,
+        currentPeriodEnd: user.premiumTier?.currentPeriodEnd,
+        cancelAtPeriodEnd: false,
+        updatedAt: now,
+      },
+      updatedAt: now,
+    });
+
+    // Create audit log
+    await ctx.db.insert("premiumTierChanges", {
+      userId: args.userId,
+      previousTier,
+      newTier: args.tier,
+      reason: "manual_adjustment",
+      metadata: {
+        adminReason: args.reason,
+        adminEmail: identity.email,
+      },
+      createdAt: now,
+    });
+
+    console.log(
+      `[Premium Tier] Admin set user ${args.userId} tier: ${previousTier} -> ${args.tier}`
+    );
+
+    return {
+      success: true,
+      previousTier,
+      newTier: args.tier,
+    };
+  },
+});

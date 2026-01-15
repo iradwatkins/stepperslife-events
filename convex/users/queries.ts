@@ -347,3 +347,111 @@ export const getCreatorProfiles = query({
     };
   },
 });
+
+/**
+ * Get a user's premium tier information by user ID.
+ * Used by admin or system to check any user's tier.
+ *
+ * @param userId - The user document ID
+ * @returns Premium tier info or default free tier if not set
+ *
+ * @example
+ * const tier = useQuery(api.users.queries.getPremiumTier, { userId })
+ */
+export const getPremiumTier = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+
+    if (!user) {
+      return null;
+    }
+
+    // Return premium tier info or default to free
+    return (
+      user.premiumTier || {
+        tier: "free" as const,
+        updatedAt: Date.now(),
+      }
+    );
+  },
+});
+
+/**
+ * Get the current authenticated user's premium tier.
+ * Used for feature gating and UI display.
+ *
+ * @returns Premium tier info for current user, or null if not authenticated
+ *
+ * @example
+ * const myTier = useQuery(api.users.queries.getMyPremiumTier)
+ * if (myTier?.tier === 'pro') showProFeatures()
+ */
+export const getMyPremiumTier = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    // Parse the identity
+    let userInfo;
+    try {
+      userInfo = typeof identity === "string" ? JSON.parse(identity) : identity;
+    } catch {
+      userInfo = identity;
+    }
+
+    const email = userInfo.email || identity.email;
+    if (!email) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (!user) {
+      return null;
+    }
+
+    // Return premium tier info or default to free
+    return (
+      user.premiumTier || {
+        tier: "free" as const,
+        updatedAt: Date.now(),
+      }
+    );
+  },
+});
+
+/**
+ * Get premium tier change history for a user (admin only).
+ * Used for auditing and support purposes.
+ *
+ * @param userId - The user document ID
+ * @param limit - Max number of records to return (default 50)
+ * @returns Array of tier change records, newest first
+ *
+ * @example
+ * const history = useQuery(api.users.queries.getTierHistory, { userId })
+ */
+export const getTierHistory = query({
+  args: {
+    userId: v.id("users"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50;
+
+    const changes = await ctx.db
+      .query("premiumTierChanges")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(limit);
+
+    return changes;
+  },
+});

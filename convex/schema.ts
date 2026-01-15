@@ -48,8 +48,25 @@ export default defineSchema({
     isAdmin: v.optional(v.boolean()), // Legacy field (migrated to role field)
     // Workspace preferences (Sprint 17)
     disabledWorkspaces: v.optional(v.array(v.string())), // Workspace IDs hidden from navigation
+    // Premium Tier (Sprint 13) - Quick access to current subscription tier
+    premiumTier: v.optional(
+      v.object({
+        tier: v.union(
+          v.literal("free"),
+          v.literal("starter"),
+          v.literal("pro"),
+          v.literal("enterprise")
+        ),
+        stripeSubscriptionId: v.optional(v.string()),
+        stripeCustomerId: v.optional(v.string()),
+        currentPeriodEnd: v.optional(v.number()),
+        cancelAtPeriodEnd: v.optional(v.boolean()),
+        updatedAt: v.number(),
+      })
+    ),
   })
     .index("by_email", ["email"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_role", ["role"])
     .index("by_googleId", ["googleId"])
     .index("by_passwordResetToken", ["passwordResetToken"]),
@@ -3031,6 +3048,27 @@ export default defineSchema({
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
     .index("by_expiresAt", ["expiresAt"])
     .index("by_status", ["status"]),
+
+  // Premium Tier Changes - Audit log for tier transitions (Sprint 13)
+  premiumTierChanges: defineTable({
+    userId: v.id("users"),
+    previousTier: v.string(),
+    newTier: v.string(),
+    reason: v.union(
+      v.literal("subscription_created"),
+      v.literal("subscription_updated"),
+      v.literal("subscription_deleted"),
+      v.literal("subscription_expired"),
+      v.literal("manual_adjustment")
+    ),
+    stripeEventId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    metadata: v.optional(v.any()), // Additional context
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_stripeEventId", ["stripeEventId"])
+    .index("by_createdAt", ["createdAt"]),
 
   // Event Promotions - Paid event promotion features
   eventPromotions: defineTable({
