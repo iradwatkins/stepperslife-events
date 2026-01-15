@@ -139,6 +139,49 @@ export const create = internalMutation({
 });
 
 /**
+ * Delete all read notifications for current user
+ */
+export const deleteAllRead = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const userInfo = typeof identity === "string" ? JSON.parse(identity) : identity;
+    const email = userInfo.email || identity.email;
+    if (!email) {
+      throw new Error("Invalid token");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get all read notifications for this user
+    const readNotifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_user_read", (q) => q.eq("userId", user._id).eq("isRead", true))
+      .collect();
+
+    // Delete all read notifications
+    let deletedCount = 0;
+    for (const notification of readNotifications) {
+      await ctx.db.delete(notification._id);
+      deletedCount++;
+    }
+
+    return { success: true, deletedCount };
+  },
+});
+
+/**
  * Delete a notification
  */
 export const deleteNotification = mutation({

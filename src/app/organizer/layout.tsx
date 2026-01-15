@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 import { RoleBasedSidebar } from "@/components/navigation";
 import { AppHeader } from "@/components/sidebar/app-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { NavUser } from "@/lib/navigation/types";
+import { NavUser, OrganizerTeamMembership } from "@/lib/navigation/types";
 import { generateUserInitials } from "@/lib/navigation/utils";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import Link from "next/link";
@@ -22,6 +24,34 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Fetch organizer team roles from Convex (Sprint 13.4)
+  const organizerTeamRoles = useQuery(api.staff.queries.getMyOrganizerTeamRoles);
+
+  // Track if we've already applied team roles to avoid infinite loop
+  const [teamRolesApplied, setTeamRolesApplied] = useState(false);
+
+  // Update user with team roles when they load
+  useEffect(() => {
+    if (user && organizerTeamRoles && !teamRolesApplied) {
+      // Map Convex response to OrganizerTeamMembership type
+      const teamMemberships: OrganizerTeamMembership[] = organizerTeamRoles.map((tr) => ({
+        organizerId: tr.organizerId,
+        organizerName: tr.organizerName,
+        organizerEmail: tr.organizerEmail,
+        role: tr.role,
+        permissions: tr.permissions,
+      }));
+      setUser((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          organizerTeamRoles: teamMemberships,
+        };
+      });
+      setTeamRolesApplied(true);
+    }
+  }, [organizerTeamRoles, user, teamRolesApplied]);
 
   // Fetch user data from auth API
   useEffect(() => {
@@ -40,8 +70,8 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
             role: apiUser.role || "organizer",
             avatar: apiUser.avatar,
             initials: generateUserInitials(apiUser.name, apiUser.email),
-            // TODO: Fetch staff roles from event assignments if needed
             staffRoles: [],
+            organizerTeamRoles: [], // Will be populated by Convex query
           };
 
           // Multi-role support: Allow users with any authenticated role to access organizer features

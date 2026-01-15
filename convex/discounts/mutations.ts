@@ -58,6 +58,58 @@ export const createDiscountCode = mutation({
       throw new Error("Fixed amount discount must be greater than 0");
     }
 
+    // Check for low-price warnings (Story 13.5)
+    const warnings: string[] = [];
+    const ticketTiers = await ctx.db
+      .query("ticketTiers")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+
+    // Get payment config for charity discount status
+    const paymentConfig = await ctx.db
+      .query("eventPaymentConfig")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .first();
+
+    const charityDiscount = paymentConfig?.charityDiscount || false;
+    const DEFAULT_PLATFORM_FEE_PERCENT = 3.7;
+    const DEFAULT_PLATFORM_FEE_FIXED_CENTS = 179;
+
+    for (const tier of ticketTiers) {
+      // Skip if this discount only applies to specific tiers and this isn't one
+      if (args.applicableToTierIds && !args.applicableToTierIds.includes(tier._id)) {
+        continue;
+      }
+
+      const priceCents = tier.price;
+
+      // Calculate discount amount
+      let discountAmountCents = 0;
+      if (args.discountType === "PERCENTAGE") {
+        discountAmountCents = Math.round((priceCents * args.discountValue) / 100);
+      } else {
+        discountAmountCents = args.discountValue;
+      }
+      const discountedPrice = Math.max(0, priceCents - discountAmountCents);
+
+      // Calculate platform fee
+      let platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+      let platformFeeFixed = DEFAULT_PLATFORM_FEE_FIXED_CENTS;
+      if (charityDiscount) {
+        platformFeePercent = platformFeePercent / 2;
+        platformFeeFixed = Math.round(platformFeeFixed / 2);
+      }
+      const platformFee = Math.round((discountedPrice * platformFeePercent) / 100) + platformFeeFixed;
+      const organizerNet = discountedPrice - platformFee;
+
+      // Warn if organizer would lose money
+      if (organizerNet < 0) {
+        warnings.push(
+          `Warning: "${tier.name}" ticket ($${(priceCents / 100).toFixed(2)}) with this discount becomes $${(discountedPrice / 100).toFixed(2)}, below the $${(platformFee / 100).toFixed(2)} platform fee. You will lose $${(Math.abs(organizerNet) / 100).toFixed(2)} per ticket.`
+        );
+      }
+    }
+
     const now = Date.now();
 
     const discountCodeId = await ctx.db.insert("discountCodes", {
@@ -78,7 +130,11 @@ export const createDiscountCode = mutation({
       updatedAt: now,
     });
 
-    return { success: true, discountCodeId };
+    return {
+      success: true,
+      discountCodeId,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
   },
 });
 

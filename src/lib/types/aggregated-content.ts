@@ -14,8 +14,14 @@ export interface Restaurant {
   totalReviews: number;
 }
 
-// Event types from Convex (events.stepperslife.com)
-export type EventType = "TICKETED_EVENT" | "FREE_EVENT" | "SAVE_THE_DATE";
+// Event types from Convex (events.stepperslife.com) - must match convex/schema.ts
+export type EventType =
+  | "SAVE_THE_DATE"
+  | "FREE_EVENT"
+  | "GENERAL_POSTING"
+  | "TICKETED_EVENT"
+  | "SEATED_EVENT"
+  | "CLASS";
 export type EventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
 
 export interface EventLocation {

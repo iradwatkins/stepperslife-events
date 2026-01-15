@@ -469,6 +469,14 @@ export const createOrder = mutation({
       }
     }
 
+    // Generate unique order number: ORD-YYYYMMDD-XXXX
+    const generateOrderNumber = (): string => {
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `ORD-${dateStr}-${random}`;
+    };
+
     // Create order
     const orderId = await ctx.db.insert("orders", {
       eventId: args.eventId,
@@ -483,6 +491,7 @@ export const createOrder = mutation({
       soldByStaffId: staffMember?._id,
       referralCode: args.referralCode,
       selectedSeats: args.selectedSeats,
+      orderNumber: generateOrderNumber(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1746,5 +1755,153 @@ export const clearEarlyBirdPricing = mutation({
     });
 
     return { success: true, basePrice: tier.price };
+  },
+});
+
+// =====================================================
+// TICKET DISTRIBUTION TO TEAM - Story 14.8
+// =====================================================
+
+/**
+ * Distribute comp tickets to staff/team members
+ *
+ * Allows organizers to give free tickets to their team members
+ * working the event. These tickets are marked separately from sales.
+ *
+ * @param eventId - The event to distribute tickets for
+ * @param staffUserId - The user ID of the staff member receiving tickets
+ * @param ticketTypeId - The ticket tier to distribute
+ * @param quantity - Number of tickets (max 10 per distribution)
+ * @param notes - Optional notes about the distribution
+ */
+export const distributeTicketsToStaff = mutation({
+  args: {
+    eventId: v.id("events"),
+    staffUserId: v.id("users"),
+    ticketTypeId: v.id("ticketTiers"),
+    quantity: v.number(),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Verify user is authenticated and owns the event
+    const { user, event } = await requireEventOwnership(ctx, args.eventId);
+
+    // Validate quantity (max 10 per distribution for safety)
+    if (args.quantity < 1 || args.quantity > 10) {
+      throw new Error("Quantity must be between 1 and 10 tickets per distribution");
+    }
+
+    // Verify the staff user exists
+    const staffUser = await ctx.db.get(args.staffUserId);
+    if (!staffUser) {
+      throw new Error("Staff user not found");
+    }
+
+    // Verify the ticket tier exists and belongs to this event
+    const ticketTier = await ctx.db.get(args.ticketTypeId);
+    if (!ticketTier) {
+      throw new Error("Ticket tier not found");
+    }
+    if (ticketTier.eventId !== args.eventId) {
+      throw new Error("Ticket tier does not belong to this event");
+    }
+
+    // Create tickets marked as distributed (comp tickets)
+    const ticketIds: Id<"tickets">[] = [];
+
+    for (let i = 0; i < args.quantity; i++) {
+      // Generate unique ticket code
+      const ticketCode = `COMP-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+      const ticketId = await ctx.db.insert("tickets", {
+        eventId: args.eventId,
+        ticketTierId: args.ticketTypeId,
+        attendeeId: args.staffUserId,
+        attendeeEmail: staffUser.email,
+        attendeeName: staffUser.name || staffUser.email,
+        ticketCode,
+        status: "VALID",
+        paymentMethod: "FREE", // Mark as free/comp ticket
+        // Store distribution info in bundle fields (reuse existing fields)
+        bundleId: `dist_${user._id}_${now}`, // Group distributed tickets together
+        bundleName: args.notes || `Comp ticket from ${user.name || user.email}`,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      ticketIds.push(ticketId);
+    }
+
+    // Record the distribution in a dedicated record for tracking
+    // Using staffSales table structure for consistency
+    await ctx.db.insert("staffSales", {
+      staffId: (await ctx.db
+        .query("eventStaff")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .filter((q) => q.eq(q.field("staffUserId"), args.staffUserId))
+        .first())?._id || (await ctx.db
+        .query("eventStaff")
+        .withIndex("by_organizer", (q) => q.eq("organizerId", user._id))
+        .filter((q) => q.eq(q.field("staffUserId"), args.staffUserId))
+        .first())?._id as Id<"eventStaff">,
+      staffUserId: args.staffUserId,
+      eventId: args.eventId,
+      orderId: ticketIds[0] as unknown as Id<"orders">, // Store first ticket ID for reference
+      ticketCount: args.quantity,
+      commissionAmount: 0, // No commission for comp tickets
+      paymentMethod: "ONLINE", // Mark distribution differently
+      createdAt: now,
+    });
+
+    return {
+      success: true,
+      ticketIds,
+      count: ticketIds.length,
+      recipientName: staffUser.name || staffUser.email,
+    };
+  },
+});
+
+/**
+ * Revoke distributed tickets
+ *
+ * Allows organizers to cancel comp tickets they've distributed.
+ * Only works on tickets that haven't been scanned yet.
+ *
+ * @param ticketId - The ticket to revoke
+ */
+export const revokeDistributedTicket = mutation({
+  args: {
+    ticketId: v.id("tickets"),
+  },
+  handler: async (ctx, args) => {
+    // Get the ticket
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // Verify ownership of the event
+    await requireEventOwnership(ctx, ticket.eventId);
+
+    // Check if this is a comp ticket (paymentMethod = FREE and bundleId starts with dist_)
+    if (ticket.paymentMethod !== "FREE" || !ticket.bundleId?.startsWith("dist_")) {
+      throw new Error("This ticket is not a distributed comp ticket");
+    }
+
+    // Cannot revoke scanned tickets
+    if (ticket.status === "SCANNED") {
+      throw new Error("Cannot revoke a ticket that has already been scanned");
+    }
+
+    // Cancel the ticket
+    await ctx.db.patch(args.ticketId, {
+      status: "CANCELLED",
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, ticketId: args.ticketId };
   },
 });

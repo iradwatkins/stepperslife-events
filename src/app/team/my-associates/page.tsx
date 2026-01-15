@@ -4,21 +4,35 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, TrendingUp, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, Plus, TrendingUp, ArrowRight, Clock, CheckCircle, PauseCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function MyAssociatesPage() {
+  // Legacy staff-based associates (global sub-sellers)
   const staffDashboard = useQuery(api.staff.queries.getStaffDashboard);
   const globalSubSellers = useQuery(api.staff.queries.getMyGlobalSubSellers);
 
-  const isLoading = staffDashboard === undefined || globalSubSellers === undefined;
+  // New associates table
+  const associates = useQuery(api.associates.queries.getMyAssociates, {});
+  const associateStats = useQuery(api.associates.queries.getAssociateStats);
 
-  // Count of global sub-sellers (associates)
-  const associateCount = globalSubSellers?.length || 0;
+  const isLoading = staffDashboard === undefined || globalSubSellers === undefined || associates === undefined;
 
-  // Calculate aggregate associate stats from global sub-sellers
+  // Combined counts from both sources
+  const legacyAssociateCount = globalSubSellers?.length || 0;
+  const newAssociateCount = associates?.length || 0;
+  const totalAssociateCount = legacyAssociateCount + newAssociateCount;
+
+  // Calculate aggregate stats from global sub-sellers (legacy)
   const totalAssociateSales = globalSubSellers?.reduce((sum, s) => sum + (s.ticketsSold || 0), 0) || 0;
-  const activeAssociates = globalSubSellers?.filter(s => s.isActive).length || 0;
+  const activeLegacyAssociates = globalSubSellers?.filter(s => s.isActive).length || 0;
+
+  // New associates stats
+  const activeNewAssociates = associateStats?.active || 0;
+  const pendingAssociates = associateStats?.pending || 0;
+
+  const totalActiveAssociates = activeLegacyAssociates + activeNewAssociates;
 
   return (
     <div className="p-6 space-y-6">
@@ -35,14 +49,14 @@ export default function MyAssociatesPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Associates</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? "..." : associateCount}</div>
+            <div className="text-2xl font-bold">{isLoading ? "..." : totalAssociateCount}</div>
             <p className="text-xs text-muted-foreground">On your team</p>
           </CardContent>
         </Card>
@@ -50,11 +64,22 @@ export default function MyAssociatesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Sellers</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{isLoading ? "..." : activeAssociates}</div>
+            <div className="text-2xl font-bold text-success">{isLoading ? "..." : totalActiveAssociates}</div>
             <p className="text-xs text-muted-foreground">Currently active</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Invites</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{isLoading ? "..." : pendingAssociates}</div>
+            <p className="text-xs text-muted-foreground">Awaiting response</p>
           </CardContent>
         </Card>
 
@@ -100,7 +125,7 @@ export default function MyAssociatesPage() {
                   </div>
                   <div>
                     <CardTitle className="text-base">Manage Associates</CardTitle>
-                    <CardDescription className="mt-1">{associateCount} associates</CardDescription>
+                    <CardDescription className="mt-1">{totalAssociateCount} associates</CardDescription>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -140,13 +165,53 @@ export default function MyAssociatesPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Loading associates...</p>
             </div>
-          ) : globalSubSellers && globalSubSellers.length > 0 ? (
+          ) : (totalAssociateCount > 0) ? (
             <div className="space-y-3">
-              {globalSubSellers.map((associate) => (
+              {/* New associates from associates table */}
+              {associates && associates.map((associate) => (
                 <div key={associate._id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-semibold">{associate.name}</p>
-                    <p className="text-sm text-muted-foreground">{associate.email}</p>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{associate.name}</p>
+                        <Badge
+                          variant={
+                            associate.status === "ACTIVE" ? "default" :
+                            associate.status === "PENDING" ? "secondary" :
+                            "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {associate.status === "ACTIVE" && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {associate.status === "PENDING" && <Clock className="h-3 w-3 mr-1" />}
+                          {associate.status === "SUSPENDED" && <PauseCircle className="h-3 w-3 mr-1" />}
+                          {associate.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{associate.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">
+                      {associate.status === "PENDING" ? "Invitation pending" : "Ready to sell"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {/* Legacy associates from eventStaff table */}
+              {globalSubSellers && globalSubSellers.map((associate) => (
+                <div key={associate._id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{associate.name}</p>
+                        <Badge variant="default" className="text-xs">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          ACTIVE
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{associate.email}</p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">{associate.ticketsSold || 0} sold</p>

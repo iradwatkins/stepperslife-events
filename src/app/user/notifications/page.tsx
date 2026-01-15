@@ -32,6 +32,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -97,6 +108,7 @@ export default function NotificationsPage() {
   const deleteNotification = useMutation(
     api.notifications.mutations.deleteNotification
   );
+  const deleteAllRead = useMutation(api.notifications.mutations.deleteAllRead);
 
   // Filter client-side for "read" filter since API only supports unreadOnly
   const notifications = (notificationsData ?? []).filter(n => {
@@ -139,19 +151,25 @@ export default function NotificationsPage() {
     }
   };
 
-  // Note: deleteAllRead mutation is not yet implemented
-  // const handleDeleteAllRead = async () => {
-  //   setIsDeletingRead(true);
-  //   try {
-  //     const result = await deleteAllRead({});
-  //     toast.success(`Deleted ${result.count} read notifications`);
-  //   } catch (error) {
-  //     toast.error("Failed to delete read notifications");
-  //     console.error(error);
-  //   } finally {
-  //     setIsDeletingRead(false);
-  //   }
-  // };
+  const handleDeleteAllRead = async () => {
+    setIsDeletingRead(true);
+    try {
+      const result = await deleteAllRead({});
+      if (result.deletedCount > 0) {
+        toast.success(`Deleted ${result.deletedCount} read notification${result.deletedCount !== 1 ? "s" : ""}`);
+      } else {
+        toast.info("No read notifications to delete");
+      }
+    } catch (error) {
+      toast.error("Failed to delete read notifications");
+      console.error(error);
+    } finally {
+      setIsDeletingRead(false);
+    }
+  };
+
+  // Count of read notifications for UI display
+  const readCount = (notificationsData ?? []).filter(n => n.isRead).length;
 
   // Group notifications by date
   const groupedNotifications = notifications.reduce(
@@ -246,21 +264,43 @@ export default function NotificationsPage() {
                   Mark all read
                 </Button>
               )}
-              {/* Delete all read button - disabled until mutation is implemented */}
-              {/* <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteAllRead}
-                disabled={isDeletingRead}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                {isDeletingRead ? (
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-1 h-4 w-4" />
-                )}
-                Clear read
-              </Button> */}
+              {readCount > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isDeletingRead}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {isDeletingRead ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-1 h-4 w-4" />
+                      )}
+                      Clear read
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete all read notifications?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete {readCount} read notification{readCount !== 1 ? "s" : ""}.
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAllRead}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete all
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </CardContent>

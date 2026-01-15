@@ -5,9 +5,10 @@ import { Id } from "@/convex/_generated/dataModel";
  * User role types matching the database schema and staff roles
  */
 export type UserRole = "admin" | "organizer" | "instructor" | "restaurateur" | "vendor" | "user";
-export type StaffRole = "STAFF" | "TEAM_MEMBERS" | "ASSOCIATES";
+export type StaffRole = "STAFF" | "TEAM_MEMBERS" | "ASSOCIATES" | "MANAGER" | "SELLER";
 export type RestaurantStaffRole = "RESTAURANT_MANAGER" | "RESTAURANT_STAFF";
-export type AllRoles = UserRole | StaffRole;
+export type OrganizerTeamRole = "OWNER" | "MANAGER" | "STAFF" | "VOLUNTEER";
+export type AllRoles = UserRole | StaffRole | OrganizerTeamRole;
 
 /**
  * Navigation item configuration
@@ -117,6 +118,17 @@ export interface RoleNavigation {
 }
 
 /**
+ * Organizer team membership info
+ */
+export interface OrganizerTeamMembership {
+  organizerId: string;
+  organizerName: string;
+  organizerEmail: string;
+  role: OrganizerTeamRole;
+  permissions: string[];
+}
+
+/**
  * User with role information for navigation
  */
 export interface NavUser {
@@ -129,6 +141,9 @@ export interface NavUser {
 
   /** Staff roles for events (if applicable) */
   staffRoles?: StaffRole[];
+
+  /** Organizer team memberships (Sprint 13.4) */
+  organizerTeamRoles?: OrganizerTeamMembership[];
 
   /** Current active role (for multi-role users) */
   activeRole?: AllRoles;

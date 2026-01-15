@@ -244,6 +244,10 @@ export function getWorkspaceDefaultPath(
     STAFF: "/staff/dashboard",
     TEAM_MEMBERS: "/team/dashboard",
     ASSOCIATES: "/associate/dashboard",
+    MANAGER: "/staff/dashboard",
+    SELLER: "/staff/dashboard",
+    OWNER: "/organizer/dashboard",
+    VOLUNTEER: "/staff/dashboard",
   };
 
   // Return path for first available role in this workspace
@@ -271,6 +275,10 @@ export function getRoleDisplayName(role: AllRoles): string {
     STAFF: "Event Staff",
     TEAM_MEMBERS: "Team Member",
     ASSOCIATES: "Sales Associate",
+    MANAGER: "Manager",
+    SELLER: "Seller",
+    OWNER: "Team Owner",
+    VOLUNTEER: "Volunteer",
   };
   return displayNames[role] || role;
 }
@@ -289,6 +297,10 @@ export function getRoleDescription(role: AllRoles): string {
     STAFF: "Scan tickets at events",
     TEAM_MEMBERS: "Distribute tickets to team",
     ASSOCIATES: "Sell tickets and earn commission",
+    MANAGER: "Full sales access and team management",
+    SELLER: "Sell assigned tiers and earn commission",
+    OWNER: "Full control over organizer team",
+    VOLUNTEER: "Limited access to assigned events",
   };
   return descriptions[role] || "";
 }

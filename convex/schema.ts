@@ -849,6 +849,9 @@ export default defineSchema({
     webhookProcessedAt: v.optional(v.number()), // When webhook completed processing
     paymentProcessedBy: v.optional(v.string()), // Webhook event ID that processed payment
 
+    // Order number for lookups and display (Story 14.7)
+    orderNumber: v.optional(v.string()), // Format: ORD-YYYYMMDD-XXXX
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -857,7 +860,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
     .index("by_status", ["status"])
-    .index("by_referral", ["staffReferralCode"]),
+    .index("by_referral", ["staffReferralCode"])
+    .index("by_orderNumber", ["orderNumber"]),
 
   // Individual ticket instances
   ticketInstances: defineTable({
@@ -2181,6 +2185,32 @@ export default defineSchema({
     .index("by_restaurant", ["restaurantId"])
     .index("by_type", ["type"])
     .index("by_status", ["status"]),
+
+  // Notification Preferences - Per-user settings for notification categories (Sprint 13.8)
+  notificationPreferences: defineTable({
+    userId: v.id("users"),
+
+    // Master toggles
+    enablePush: v.boolean(),
+    enableEmail: v.boolean(),
+
+    // Category toggles - which notification types to receive
+    categories: v.object({
+      order: v.boolean(), // Order confirmations and updates
+      event: v.boolean(), // Event reminders and updates
+      ticket: v.boolean(), // Ticket purchase and transfer notifications
+      class: v.boolean(), // Class schedule and reminder notifications
+      payout: v.boolean(), // Payout and earnings notifications
+      review: v.boolean(), // Review requests and responses
+      message: v.boolean(), // Direct messages from organizers/attendees
+      system: v.boolean(), // System updates and announcements
+      promotion: v.boolean(), // Promotional offers and discounts
+    }),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 
   // ==========================================
   // EMAIL LOG MODULE - Track all sent emails for audit and resend
@@ -3811,4 +3841,28 @@ export default defineSchema({
     .index("by_tokenHash", ["tokenHash"])
     .index("by_userId_active", ["userId", "isRevoked"])
     .index("by_expiresAt", ["expiresAt"]),
+
+  // Associates - Sales team members who sell tickets on behalf of organizers
+  // These are global team members (not event-specific like eventStaff)
+  associates: defineTable({
+    name: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    status: v.union(
+      v.literal("PENDING"),   // Invitation sent, not yet accepted
+      v.literal("ACTIVE"),    // Actively selling
+      v.literal("SUSPENDED"), // Temporarily disabled
+      v.literal("REMOVED")    // Soft deleted
+    ),
+    invitedById: v.id("users"), // The team leader who invited this associate
+    userId: v.optional(v.id("users")), // Set when associate accepts invitation and creates/links account
+    invitedAt: v.number(),
+    joinedAt: v.optional(v.number()), // When they accepted the invitation
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_invitedBy", ["invitedById"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_userId", ["userId"]),
 });

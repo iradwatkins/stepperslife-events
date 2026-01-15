@@ -72,6 +72,28 @@ const ROLE_CONFIG: Record<
     description: "Sell tickets and earn commission",
     dashboardPath: "/associate/dashboard",
   },
+  // New simplified staff roles
+  MANAGER: {
+    label: "Manager",
+    description: "Full sales access and team management",
+    dashboardPath: "/staff/dashboard",
+  },
+  SELLER: {
+    label: "Seller",
+    description: "Sell tickets and earn commission",
+    dashboardPath: "/staff/dashboard",
+  },
+  // Organizer team roles (Sprint 13.4)
+  OWNER: {
+    label: "Team Owner",
+    description: "Full control over organizer team",
+    dashboardPath: "/organizer/dashboard",
+  },
+  VOLUNTEER: {
+    label: "Volunteer",
+    description: "Limited event access",
+    dashboardPath: "/staff/dashboard",
+  },
 };
 
 interface RoleSwitcherProps {

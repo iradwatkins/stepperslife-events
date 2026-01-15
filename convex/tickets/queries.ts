@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { Id } from "../_generated/dataModel";
 import { requireEventOwnership } from "../lib/auth";
 
 // Types for seating chart sections and rows
@@ -196,10 +197,101 @@ export const getTicketByOrderNumber = query({
   args: {
     orderNumber: v.string(),
   },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handler: async (ctx, args) => {
-    // Function temporarily disabled - orderNumber field doesn't exist in schema
-    return null;
+    // Find order by order number using the new index
+    const order = await ctx.db
+      .query("orders")
+      .withIndex("by_orderNumber", (q) => q.eq("orderNumber", args.orderNumber))
+      .first();
+
+    if (!order) return null;
+
+    // Get tickets for this order
+    const tickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_order", (q) => q.eq("orderId", order._id))
+      .collect();
+
+    if (tickets.length === 0) return null;
+
+    // Get event details
+    const event = await ctx.db.get(order.eventId);
+    if (!event) return null;
+
+    // Get image URL if exists
+    let imageUrl = resolveStorageUrl(event?.imageUrl ?? null);
+    if (!imageUrl && event?.images && event.images.length > 0) {
+      const url = await ctx.storage.getUrl(event.images[0]);
+      imageUrl = resolveStorageUrl(url);
+    }
+
+    // Enrich tickets with tier and seat information
+    const enrichedTickets = await Promise.all(
+      tickets.map(async (ticket) => {
+        const tier = ticket.ticketTierId ? await ctx.db.get(ticket.ticketTierId) : null;
+
+        // Get seat reservation if exists
+        const seatReservation = await ctx.db
+          .query("seatReservations")
+          .withIndex("by_ticket", (q) => q.eq("ticketId", ticket._id))
+          .filter((q) => q.eq(q.field("status"), "RESERVED"))
+          .first();
+
+        // Get section and row names from seating chart
+        let seatInfo = null;
+        if (seatReservation) {
+          const seatingChart = await ctx.db.get(seatReservation.seatingChartId);
+          if (seatingChart) {
+            const sections = seatingChart.sections as SeatingSection[];
+            const section = sections.find((s) => s.id === seatReservation.sectionId);
+            if (section) {
+              const row = section.rows?.find((r) => r.id === seatReservation.rowId);
+              seatInfo = {
+                sectionName: section.name,
+                rowLabel: row?.label || "",
+                seatNumber: seatReservation.seatNumber,
+              };
+            }
+          }
+        }
+
+        return {
+          _id: ticket._id,
+          ticketCode: ticket.ticketCode,
+          status: ticket.status,
+          createdAt: ticket.createdAt,
+          tier: tier
+            ? {
+                name: tier.name,
+                price: tier.price,
+              }
+            : null,
+          seat: seatInfo,
+        };
+      })
+    );
+
+    return {
+      order: {
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        totalCents: order.totalCents,
+        status: order.status,
+        paidAt: order.paidAt,
+        buyerName: order.buyerName,
+        buyerEmail: order.buyerEmail,
+      },
+      event: {
+        _id: event._id,
+        name: event.name,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        location: event.location,
+        imageUrl,
+        eventType: event.eventType,
+      },
+      tickets: enrichedTickets,
+    };
   },
 });
 
@@ -211,15 +303,93 @@ export const getTicketInstance = query({
     ticketNumber: v.string(),
   },
   handler: async (ctx, args) => {
-    const ticket = await ctx.db
+    const ticketInstance = await ctx.db
       .query("ticketInstances")
       .withIndex("by_ticket_number", (q) => q.eq("ticketNumber", args.ticketNumber))
       .first();
 
-    if (!ticket) return null;
+    if (!ticketInstance) return null;
 
-    // Return ticket - enrichment temporarily disabled due to schema mismatch
-    return ticket;
+    // Get the associated ticket for more details
+    const ticket = await ctx.db.get(ticketInstance.ticketId);
+
+    // Get order details including order number
+    const order = await ctx.db.get(ticketInstance.orderId);
+
+    // Get event details
+    const event = await ctx.db.get(ticketInstance.eventId);
+
+    // Get ticket tier if available
+    const tier = ticket?.ticketTierId ? await ctx.db.get(ticket.ticketTierId) : null;
+
+    // Get image URL if event exists
+    let imageUrl: string | undefined;
+    if (event) {
+      imageUrl = resolveStorageUrl(event.imageUrl ?? null);
+      if (!imageUrl && event.images && event.images.length > 0) {
+        const url = await ctx.storage.getUrl(event.images[0]);
+        imageUrl = resolveStorageUrl(url);
+      }
+    }
+
+    // Get seat reservation if exists (for reserved seating events)
+    let seatInfo = null;
+    if (ticket) {
+      const seatReservation = await ctx.db
+        .query("seatReservations")
+        .withIndex("by_ticket", (q) => q.eq("ticketId", ticket._id))
+        .filter((q) => q.eq(q.field("status"), "RESERVED"))
+        .first();
+
+      if (seatReservation) {
+        const seatingChart = await ctx.db.get(seatReservation.seatingChartId);
+        if (seatingChart) {
+          const sections = seatingChart.sections as SeatingSection[];
+          const section = sections.find((s) => s.id === seatReservation.sectionId);
+          if (section) {
+            const row = section.rows?.find((r) => r.id === seatReservation.rowId);
+            seatInfo = {
+              sectionName: section.name,
+              rowLabel: row?.label || "",
+              seatNumber: seatReservation.seatNumber,
+            };
+          }
+        }
+      }
+    }
+
+    return {
+      ...ticketInstance,
+      order: order
+        ? {
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            totalCents: order.totalCents,
+            status: order.status,
+            paidAt: order.paidAt,
+          }
+        : null,
+      event: event
+        ? {
+            _id: event._id,
+            name: event.name,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            location: event.location,
+            imageUrl,
+            eventType: event.eventType,
+          }
+        : null,
+      tier: tier
+        ? {
+            name: tier.name,
+            price: tier.price,
+          }
+        : null,
+      seat: seatInfo,
+      attendeeName: ticket?.attendeeName,
+      attendeeEmail: ticket?.attendeeEmail,
+    };
   },
 });
 
@@ -756,5 +926,190 @@ export const getTicketTierForEdit = query({
       hoursUntilLock,
       eventStartDate: event.startDate,
     };
+  },
+});
+
+// =====================================================
+// TICKET DISTRIBUTION QUERIES - Story 14.8
+// =====================================================
+
+/**
+ * Get distribution history for an event or all organizer events
+ *
+ * Returns all comp tickets distributed to team members with details.
+ *
+ * @param eventId - Optional specific event to filter by
+ */
+export const getDistributionHistory = query({
+  args: {
+    eventId: v.optional(v.id("events")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) {
+      throw new Error("Authentication required");
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!currentUser) {
+      throw new Error("User not found");
+    }
+
+    // Get distributed tickets (paymentMethod = FREE and bundleId starts with dist_)
+    let distributedTickets;
+
+    if (args.eventId) {
+      // Verify ownership of the event
+      const event = await ctx.db.get(args.eventId);
+      if (!event) {
+        throw new Error("Event not found");
+      }
+      if (event.organizerId !== currentUser._id && currentUser.role !== "admin") {
+        throw new Error("Not authorized to view this event's distributions");
+      }
+
+      // Get distributed tickets for specific event
+      distributedTickets = await ctx.db
+        .query("tickets")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId!))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("paymentMethod"), "FREE"),
+            q.neq(q.field("bundleId"), undefined)
+          )
+        )
+        .collect();
+
+      // Filter for dist_ prefix (can't do string operations in filter)
+      distributedTickets = distributedTickets.filter(
+        (t) => t.bundleId && t.bundleId.startsWith("dist_")
+      );
+    } else {
+      // Get all events for this organizer
+      const organizerEvents = await ctx.db
+        .query("events")
+        .withIndex("by_organizer", (q) => q.eq("organizerId", currentUser._id))
+        .collect();
+
+      const eventIds = organizerEvents.map((e) => e._id);
+
+      // Get distributed tickets for all organizer events
+      distributedTickets = [];
+      for (const eventId of eventIds) {
+        const eventTickets = await ctx.db
+          .query("tickets")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("paymentMethod"), "FREE"),
+              q.neq(q.field("bundleId"), undefined)
+            )
+          )
+          .collect();
+
+        // Filter for dist_ prefix
+        const compTickets = eventTickets.filter(
+          (t) => t.bundleId && t.bundleId.startsWith("dist_")
+        );
+        distributedTickets.push(...compTickets);
+      }
+    }
+
+    // Group by distribution batch (bundleId)
+    const distributionGroups = new Map<
+      string,
+      {
+        bundleId: string;
+        tickets: typeof distributedTickets;
+        eventId: string;
+        recipientId: string;
+        notes: string;
+        createdAt: number;
+      }
+    >();
+
+    for (const ticket of distributedTickets) {
+      const bundleId = ticket.bundleId!;
+      if (!distributionGroups.has(bundleId)) {
+        distributionGroups.set(bundleId, {
+          bundleId,
+          tickets: [],
+          eventId: ticket.eventId,
+          recipientId: ticket.attendeeId as string,
+          notes: ticket.bundleName || "",
+          createdAt: ticket.createdAt,
+        });
+      }
+      distributionGroups.get(bundleId)!.tickets.push(ticket);
+    }
+
+    // Enrich with event and recipient details
+    const enrichedDistributions = await Promise.all(
+      Array.from(distributionGroups.values()).map(async (group) => {
+        // Get event details
+        const eventDoc = await ctx.db.get(group.eventId as Id<"events">);
+
+        // Get recipient user details
+        const recipientDoc = group.recipientId
+          ? await ctx.db.get(group.recipientId as Id<"users">)
+          : null;
+
+        // Get ticket tier info from first ticket
+        const firstTicket = group.tickets[0];
+        const tierDoc = firstTicket.ticketTierId
+          ? await ctx.db.get(firstTicket.ticketTierId)
+          : null;
+
+        // Count statuses
+        const validCount = group.tickets.filter((t) => t.status === "VALID").length;
+        const scannedCount = group.tickets.filter((t) => t.status === "SCANNED").length;
+        const cancelledCount = group.tickets.filter(
+          (t) => t.status === "CANCELLED"
+        ).length;
+
+        return {
+          bundleId: group.bundleId,
+          event: eventDoc
+            ? {
+                _id: eventDoc._id,
+                name: (eventDoc as { name: string }).name,
+                startDate: (eventDoc as { startDate?: number }).startDate,
+              }
+            : null,
+          recipient: recipientDoc
+            ? {
+                _id: recipientDoc._id,
+                name: (recipientDoc as { name?: string; email: string }).name || (recipientDoc as { email: string }).email,
+                email: (recipientDoc as { email: string }).email,
+              }
+            : null,
+          tier: tierDoc
+            ? {
+                _id: tierDoc._id,
+                name: (tierDoc as { name: string }).name,
+              }
+            : null,
+          ticketCount: group.tickets.length,
+          validCount,
+          scannedCount,
+          cancelledCount,
+          notes: group.notes,
+          createdAt: group.createdAt,
+          tickets: group.tickets.map((t) => ({
+            _id: t._id,
+            ticketCode: t.ticketCode,
+            status: t.status,
+            scannedAt: t.scannedAt,
+          })),
+        };
+      })
+    );
+
+    // Sort by creation date (newest first)
+    return enrichedDistributions.sort((a, b) => b.createdAt - a.createdAt);
   },
 });

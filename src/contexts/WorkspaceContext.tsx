@@ -294,6 +294,10 @@ export function WorkspaceProvider({
         STAFF: "/staff/dashboard",
         TEAM_MEMBERS: "/team/dashboard",
         ASSOCIATES: "/associate/dashboard",
+        MANAGER: "/staff/dashboard",
+        SELLER: "/staff/dashboard",
+        OWNER: "/organizer/dashboard",
+        VOLUNTEER: "/staff/dashboard",
       };
 
       router.push(rolePaths[role]);

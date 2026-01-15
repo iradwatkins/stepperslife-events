@@ -7,10 +7,11 @@
 
 import { Id } from "@/convex/_generated/dataModel";
 
-// Event types from schema
+// Event types from schema - must match convex/schema.ts exactly
 export type EventType =
   | "SAVE_THE_DATE"
   | "FREE_EVENT"
+  | "GENERAL_POSTING"  // Information-only event, no tickets
   | "TICKETED_EVENT"
   | "SEATED_EVENT"
   | "CLASS";

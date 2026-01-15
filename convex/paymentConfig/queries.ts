@@ -187,6 +187,65 @@ export const getPaymentModelComparison = query({
 });
 
 /**
+ * Calculate effective price after discount and check if it falls below fees
+ * Used to warn organizers when creating low-margin discounts
+ */
+export const calculateDiscountedPrice = query({
+  args: {
+    ticketPriceCents: v.number(),
+    discountType: v.union(v.literal("PERCENTAGE"), v.literal("FIXED_AMOUNT")),
+    discountValue: v.number(),
+    charityDiscount: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const DEFAULT_PLATFORM_FEE_PERCENT = 3.7;
+    const DEFAULT_PLATFORM_FEE_FIXED_CENTS = 179;
+
+    // Calculate discounted price
+    let discountAmountCents = 0;
+    if (args.discountType === "PERCENTAGE") {
+      discountAmountCents = Math.round((args.ticketPriceCents * args.discountValue) / 100);
+    } else {
+      discountAmountCents = args.discountValue;
+    }
+    const discountedPriceCents = Math.max(0, args.ticketPriceCents - discountAmountCents);
+
+    // Calculate platform fee (organizer pays this)
+    let platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
+    let platformFeeFixed = DEFAULT_PLATFORM_FEE_FIXED_CENTS;
+    if (args.charityDiscount) {
+      platformFeePercent = platformFeePercent / 2;
+      platformFeeFixed = Math.round(platformFeeFixed / 2);
+    }
+
+    const platformFeeCents = Math.round((discountedPriceCents * platformFeePercent) / 100) + platformFeeFixed;
+
+    // Calculate organizer net (what they receive after platform fee)
+    const organizerNetCents = discountedPriceCents - platformFeeCents;
+    const isBelowThreshold = organizerNetCents < 0;
+
+    return {
+      originalPriceCents: args.ticketPriceCents,
+      discountAmountCents,
+      discountedPriceCents,
+      platformFeeCents,
+      organizerNetCents,
+      isBelowThreshold,
+      breakdown: {
+        originalPrice: `$${(args.ticketPriceCents / 100).toFixed(2)}`,
+        discountAmount: `$${(discountAmountCents / 100).toFixed(2)}`,
+        discountedPrice: `$${(discountedPriceCents / 100).toFixed(2)}`,
+        platformFee: `$${(platformFeeCents / 100).toFixed(2)}`,
+        organizerNet: `$${(organizerNetCents / 100).toFixed(2)}`,
+      },
+      warning: isBelowThreshold
+        ? `This discount reduces the ticket price to $${(discountedPriceCents / 100).toFixed(2)}, which is below the $${(platformFeeCents / 100).toFixed(2)} platform fee. You will lose $${(Math.abs(organizerNetCents) / 100).toFixed(2)} per ticket sold with this discount.`
+        : null,
+    };
+  },
+});
+
+/**
  * Check if organizer can use pre-purchase for event
  */
 export const canUsePrePurchase = query({

@@ -7,7 +7,16 @@
  * @module permissions
  */
 
-import { USER_ROLES, STAFF_ROLES, HIERARCHY_CONFIG, type RestaurantStaffRole } from "./roles";
+import {
+  USER_ROLES,
+  STAFF_ROLES,
+  HIERARCHY_CONFIG,
+  ORGANIZER_TEAM_ROLES,
+  ORGANIZER_TEAM_PERMISSIONS,
+  canAssignOrganizerRole,
+  type RestaurantStaffRole,
+  type OrganizerTeamRole,
+} from "./roles";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 
@@ -418,5 +427,92 @@ export function requireRestaurantOwner(
 ): void {
   if (!PermissionChecker.isRestaurantOwner(user, restaurant)) {
     throw new Error(PermissionChecker.getPermissionError("manage this restaurant"));
+  }
+}
+
+// ==========================================
+// ORGANIZER TEAM PERMISSION FUNCTIONS (Sprint 13.4)
+// ==========================================
+
+/**
+ * Get a user's organizer team role for a specific organizer
+ * Returns "OWNER" if the user is the organizer themselves
+ */
+export async function getOrganizerTeamRole(
+  ctx: ConvexCtx,
+  userId: Id<"users">,
+  organizerId: Id<"users">
+): Promise<OrganizerTeamRole | null> {
+  // Check if user is the organizer (OWNER)
+  if (userId === organizerId) {
+    return ORGANIZER_TEAM_ROLES.OWNER;
+  }
+
+  // Check for team membership in eventStaff with null eventId (org-wide)
+  const teamMember = await ctx.db
+    .query("eventStaff")
+    .withIndex("by_organizer", (q) => q.eq("organizerId", organizerId))
+    .filter((q) => q.eq(q.field("staffUserId"), userId))
+    .filter((q) => q.eq(q.field("eventId"), undefined)) // null = org-wide
+    .filter((q) => q.eq(q.field("isActive"), true))
+    .first();
+
+  if (!teamMember) return null;
+
+  // Map staff role to organizer team role
+  switch (teamMember.role) {
+    case "MANAGER":
+      return ORGANIZER_TEAM_ROLES.MANAGER;
+    case "SELLER":
+    case "STAFF":
+    case "TEAM_MEMBERS":
+      return ORGANIZER_TEAM_ROLES.STAFF;
+    case "ASSOCIATES":
+      return ORGANIZER_TEAM_ROLES.VOLUNTEER;
+    default:
+      return ORGANIZER_TEAM_ROLES.VOLUNTEER;
+  }
+}
+
+/**
+ * Check if user has permission for a specific action as organizer team member
+ */
+export async function hasOrganizerTeamPermission(
+  ctx: ConvexCtx,
+  userId: Id<"users">,
+  organizerId: Id<"users">,
+  permission: string
+): Promise<boolean> {
+  const role = await getOrganizerTeamRole(ctx, userId, organizerId);
+  if (!role) return false;
+  return ORGANIZER_TEAM_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+/**
+ * Check if user can assign a specific organizer team role
+ */
+export async function canAssignOrganizerTeamRole(
+  ctx: ConvexCtx,
+  assignerUserId: Id<"users">,
+  organizerId: Id<"users">,
+  targetRole: OrganizerTeamRole
+): Promise<boolean> {
+  const assignerRole = await getOrganizerTeamRole(ctx, assignerUserId, organizerId);
+  if (!assignerRole) return false;
+  return canAssignOrganizerRole(assignerRole, targetRole);
+}
+
+/**
+ * Require user to have organizer team permission
+ */
+export async function requireOrganizerTeamPermission(
+  ctx: ConvexCtx,
+  userId: Id<"users">,
+  organizerId: Id<"users">,
+  permission: string
+): Promise<void> {
+  const hasPermission = await hasOrganizerTeamPermission(ctx, userId, organizerId, permission);
+  if (!hasPermission) {
+    throw new Error(PermissionChecker.getPermissionError(permission.replace(/_/g, " ")));
   }
 }

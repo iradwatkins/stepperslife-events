@@ -116,6 +116,129 @@ export function isSellerRole(role: StaffRole): boolean {
 }
 
 /**
+ * Organizer Team Roles (Sprint 13.4)
+ *
+ * These are roles for people who help manage ALL events for an organizer.
+ * Different from event-specific staff roles (MANAGER, SELLER) which are per-event.
+ *
+ * HIERARCHY:
+ * - OWNER: The organizer themselves (has full control)
+ * - MANAGER: Can manage events and team, limited role assignment
+ * - STAFF: Can assist with events, no role assignment
+ * - VOLUNTEER: Limited access, specific event duties
+ */
+export const ORGANIZER_TEAM_ROLES = {
+  /** Full control - the organizer account itself */
+  OWNER: "OWNER",
+  /** Can manage events and team, limited role assignment */
+  MANAGER: "MANAGER",
+  /** Can assist with events, no role assignment */
+  STAFF: "STAFF",
+  /** Limited access, specific event duties */
+  VOLUNTEER: "VOLUNTEER",
+} as const;
+
+/** Organizer team role type */
+export type OrganizerTeamRole = (typeof ORGANIZER_TEAM_ROLES)[keyof typeof ORGANIZER_TEAM_ROLES];
+
+/**
+ * Permissions granted to each organizer team role
+ */
+export const ORGANIZER_TEAM_PERMISSIONS: Record<OrganizerTeamRole, string[]> = {
+  OWNER: [
+    "manage_events",
+    "manage_team",
+    "assign_roles",
+    "view_analytics",
+    "manage_payments",
+    "delete_team_members",
+    "view_payouts",
+    "manage_settings",
+  ],
+  MANAGER: [
+    "manage_events",
+    "view_team",
+    "assign_staff",
+    "assign_volunteers",
+    "view_analytics",
+    "manage_staff_sales",
+  ],
+  STAFF: [
+    "view_events",
+    "scan_tickets",
+    "sell_tickets",
+    "view_own_stats",
+    "manage_door",
+  ],
+  VOLUNTEER: [
+    "view_assigned_events",
+    "scan_tickets",
+  ],
+};
+
+/**
+ * Check if an organizer team role can assign another role
+ */
+export function canAssignOrganizerRole(
+  assignerRole: OrganizerTeamRole,
+  targetRole: OrganizerTeamRole
+): boolean {
+  // OWNER can assign any role
+  if (assignerRole === "OWNER") return true;
+
+  // MANAGER can only assign STAFF and VOLUNTEER
+  if (assignerRole === "MANAGER") {
+    return targetRole === "STAFF" || targetRole === "VOLUNTEER";
+  }
+
+  // STAFF and VOLUNTEER cannot assign roles
+  return false;
+}
+
+/**
+ * Check if an organizer team role has a specific permission
+ */
+export function hasOrganizerTeamPermission(
+  role: OrganizerTeamRole,
+  permission: string
+): boolean {
+  return ORGANIZER_TEAM_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+/**
+ * Get human-readable name for organizer team role
+ */
+export function getOrganizerTeamRoleName(role: OrganizerTeamRole): string {
+  const names: Record<OrganizerTeamRole, string> = {
+    OWNER: "Owner",
+    MANAGER: "Manager",
+    STAFF: "Staff",
+    VOLUNTEER: "Volunteer",
+  };
+  return names[role] || role;
+}
+
+/**
+ * Get description for organizer team role
+ */
+export function getOrganizerTeamRoleDescription(role: OrganizerTeamRole): string {
+  const descriptions: Record<OrganizerTeamRole, string> = {
+    OWNER: "Full control over all events, team members, payments, and settings",
+    MANAGER: "Can manage events and team, assign staff and volunteers, view analytics",
+    STAFF: "Can assist with events, scan tickets, sell tickets, manage door operations",
+    VOLUNTEER: "Limited access to assigned events and ticket scanning only",
+  };
+  return descriptions[role] || "Unknown role";
+}
+
+/**
+ * Type guard to check if a value is a valid organizer team role
+ */
+export function isOrganizerTeamRole(value: unknown): value is OrganizerTeamRole {
+  return Object.values(ORGANIZER_TEAM_ROLES).includes(value as OrganizerTeamRole);
+}
+
+/**
  * Staff roles for restaurant-specific staff members
  *
  * HIERARCHY:

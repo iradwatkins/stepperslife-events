@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,10 @@ import { UserPlus, Mail, User, Phone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function AddAssociatePage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -19,16 +21,29 @@ export default function AddAssociatePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const createAssociate = useMutation(api.associates.mutations.createAssociate);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // TODO: Add mutation to create associate when backend supports it
-      toast.success("Associate invitation sent!");
+      const result = await createAssociate({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+      });
+
+      toast.success(result.message);
       setFormData({ name: "", email: "", phone: "" });
+
+      // Redirect back to associates list after short delay
+      setTimeout(() => {
+        router.push("/team/my-associates");
+      }, 1500);
     } catch (error) {
-      toast.error("Failed to add associate");
+      const errorMessage = error instanceof Error ? error.message : "Failed to add associate";
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

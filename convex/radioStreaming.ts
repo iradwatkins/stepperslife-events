@@ -1767,6 +1767,192 @@ export const seedSampleRadioData = mutation({
   },
 });
 
+// ============================================
+// Station Settings - DJ Self-Service (Story 14.6)
+// ============================================
+
+/**
+ * Generate upload URL for station images (logo/banner)
+ */
+export const generateStationImageUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Update station info (DJ name, genre, description)
+ * Note: Station NAME changes require admin approval
+ */
+export const updateStationInfo = mutation({
+  args: {
+    stationId: v.id("radioStations"),
+    userId: v.id("users"),
+    djName: v.optional(v.string()),
+    genre: v.optional(v.string()),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Get the station
+    const station = await ctx.db.get(args.stationId);
+    if (!station) {
+      throw new Error("Station not found");
+    }
+
+    // Verify ownership
+    if (station.djId !== args.userId) {
+      throw new Error("You don't have permission to update this station");
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: Date.now(),
+    };
+
+    if (args.djName !== undefined && args.djName.trim()) {
+      updates.djName = args.djName.trim();
+    }
+
+    if (args.genre !== undefined && args.genre.trim()) {
+      updates.genre = args.genre.trim();
+    }
+
+    if (args.description !== undefined) {
+      updates.description = args.description.trim() || undefined;
+    }
+
+    await ctx.db.patch(args.stationId, updates);
+
+    return { success: true };
+  },
+});
+
+/**
+ * Update station logo
+ */
+export const updateStationLogo = mutation({
+  args: {
+    stationId: v.id("radioStations"),
+    userId: v.id("users"),
+    logoStorageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    // Get the station
+    const station = await ctx.db.get(args.stationId);
+    if (!station) {
+      throw new Error("Station not found");
+    }
+
+    // Verify ownership
+    if (station.djId !== args.userId) {
+      throw new Error("You don't have permission to update this station");
+    }
+
+    // Get the URL from storage
+    const logoUrl = await ctx.storage.getUrl(args.logoStorageId);
+    if (!logoUrl) {
+      throw new Error("Failed to get logo URL from storage");
+    }
+
+    await ctx.db.patch(args.stationId, {
+      logoUrl,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, logoUrl };
+  },
+});
+
+/**
+ * Update station banner
+ */
+export const updateStationBanner = mutation({
+  args: {
+    stationId: v.id("radioStations"),
+    userId: v.id("users"),
+    bannerStorageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    // Get the station
+    const station = await ctx.db.get(args.stationId);
+    if (!station) {
+      throw new Error("Station not found");
+    }
+
+    // Verify ownership
+    if (station.djId !== args.userId) {
+      throw new Error("You don't have permission to update this station");
+    }
+
+    // Get the URL from storage
+    const bannerUrl = await ctx.storage.getUrl(args.bannerStorageId);
+    if (!bannerUrl) {
+      throw new Error("Failed to get banner URL from storage");
+    }
+
+    await ctx.db.patch(args.stationId, {
+      bannerUrl,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, bannerUrl };
+  },
+});
+
+/**
+ * Update social links
+ */
+export const updateSocialLinks = mutation({
+  args: {
+    stationId: v.id("radioStations"),
+    userId: v.id("users"),
+    instagram: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    facebook: v.optional(v.string()),
+    website: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Get the station
+    const station = await ctx.db.get(args.stationId);
+    if (!station) {
+      throw new Error("Station not found");
+    }
+
+    // Verify ownership
+    if (station.djId !== args.userId) {
+      throw new Error("You don't have permission to update this station");
+    }
+
+    // Build social links object - only include non-empty values
+    const socialLinks: {
+      instagram?: string;
+      twitter?: string;
+      facebook?: string;
+      website?: string;
+    } = {};
+
+    if (args.instagram?.trim()) {
+      socialLinks.instagram = args.instagram.trim();
+    }
+    if (args.twitter?.trim()) {
+      socialLinks.twitter = args.twitter.trim();
+    }
+    if (args.facebook?.trim()) {
+      socialLinks.facebook = args.facebook.trim();
+    }
+    if (args.website?.trim()) {
+      socialLinks.website = args.website.trim();
+    }
+
+    await ctx.db.patch(args.stationId, {
+      socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
 /**
  * Clear all sample radio data
  */

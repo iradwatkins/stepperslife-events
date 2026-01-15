@@ -32,6 +32,8 @@ import type * as adminPanel_actions from "../adminPanel/actions.js";
 import type * as adminPanel_mutations from "../adminPanel/mutations.js";
 import type * as adminPanel_queries from "../adminPanel/queries.js";
 import type * as analytics_queries from "../analytics/queries.js";
+import type * as associates_mutations from "../associates/mutations.js";
+import type * as associates_queries from "../associates/queries.js";
 import type * as auth_mutations from "../auth/mutations.js";
 import type * as bundles_bundleEmails from "../bundles/bundleEmails.js";
 import type * as bundles_mutations from "../bundles/mutations.js";
@@ -219,6 +221,8 @@ declare const fullApi: ApiFromModules<{
   "adminPanel/mutations": typeof adminPanel_mutations;
   "adminPanel/queries": typeof adminPanel_queries;
   "analytics/queries": typeof analytics_queries;
+  "associates/mutations": typeof associates_mutations;
+  "associates/queries": typeof associates_queries;
   "auth/mutations": typeof auth_mutations;
   "bundles/bundleEmails": typeof bundles_bundleEmails;
   "bundles/mutations": typeof bundles_mutations;

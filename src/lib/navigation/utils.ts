@@ -77,7 +77,12 @@ export function filterNavItemsByPermission(
 
     // Check required roles
     if (item.requiredRoles) {
-      const userRoles = [user.role, ...(user.staffRoles || [])];
+      // Collect all user roles including organizer team roles
+      const userRoles: AllRoles[] = [
+        user.role,
+        ...(user.staffRoles || []),
+        ...(user.organizerTeamRoles?.map((tr) => tr.role) || []),
+      ];
       const hasRequiredRole = item.requiredRoles.some((role) =>
         userRoles.includes(role)
       );

@@ -87,17 +87,45 @@ export default function TemplatesPage() {
   const userTemplates = useQuery(api.templates.queries.getUserTemplates);
   const templateStats = useQuery(api.templates.queries.getTemplateStats);
 
-  // Get seating/floor plan templates - API currently unavailable
-  const floorPlanTemplates: FloorPlanTemplate[] | undefined = undefined; // TODO: api.seating.templates.getMyTemplates when available
+  // Get seating/floor plan templates from API
+  // Uses the same roomTemplates table - floor plan templates are distinguished by their detailed sections data
+  // The seating.templates API provides floor plan-specific CRUD operations
+  const floorPlanTemplatesRaw = useQuery(api.templates.queries.getUserTemplates);
+  const floorPlanTemplates: FloorPlanTemplate[] | undefined = floorPlanTemplatesRaw?.map((t) => ({
+    _id: String(t._id),
+    name: t.name,
+    description: t.description,
+    category: t.category,
+    sections: t.sections,
+    totalCapacity: t.estimatedCapacity,
+  }));
 
   // Mutations
   const deleteTemplate = useMutation(api.templates.mutations.deleteRoomTemplate);
-  // Floor plan mutations - API currently unavailable
-  const deleteFloorPlanTemplate = async (_args: { templateId: string }) => {
-    throw new Error("Floor plan deletion not yet implemented");
+  const deleteFloorPlanMutation = useMutation(api.templates.mutations.deleteRoomTemplate);
+
+  const bulkDeleteFloorPlanMutation = async (args: { templateIds: Id<"roomTemplates">[] }) => {
+    // Bulk delete by calling single delete multiple times
+    const results = { deletedCount: 0, failedCount: 0, failedTemplates: [] as Array<{ templateId: string; reason: string }> };
+    for (const templateId of args.templateIds) {
+      try {
+        await deleteFloorPlanMutation({ templateId });
+        results.deletedCount++;
+      } catch (error) {
+        results.failedCount++;
+        results.failedTemplates.push({ templateId, reason: error instanceof Error ? error.message : "Unknown error" });
+      }
+    }
+    return results;
   };
-  const bulkDeleteFloorPlanTemplates = async (_args: { templateIds: string[] }) => {
-    return { deletedCount: 0, failedCount: 0, failedTemplates: [] };
+
+  const deleteFloorPlanTemplate = async (args: { templateId: string }) => {
+    await deleteFloorPlanMutation({ templateId: args.templateId as Id<"roomTemplates"> });
+  };
+  const bulkDeleteFloorPlanTemplates = async (args: { templateIds: string[] }) => {
+    return await bulkDeleteFloorPlanMutation({
+      templateIds: args.templateIds as Id<"roomTemplates">[],
+    });
   };
 
   // Helper functions for selection

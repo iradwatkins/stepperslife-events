@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
+import {
+  ORGANIZER_TEAM_ROLES,
+  STAFF_ROLES,
+  type OrganizerTeamRole,
+} from "../lib/roles";
 
 /**
  * Get all staff members for an event
@@ -808,5 +813,292 @@ export const getGlobalStaffWithPerformance = query({
     return staffWithPerformance.sort(
       (a, b) => b.performance.totalTicketsSold - a.performance.totalTicketsSold
     );
+  },
+});
+
+/**
+ * Get the current user's organizer team roles across all organizers
+ * Returns an array of { organizerId, organizerName, role } for each organizer
+ * the user is a team member of (or OWNER if they are the organizer)
+ */
+export const getMyOrganizerTeamRoles = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) {
+      return [];
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!currentUser) {
+      return [];
+    }
+
+    const teamRoles: Array<{
+      organizerId: Id<"users">;
+      organizerName: string;
+      organizerEmail: string;
+      role: OrganizerTeamRole;
+      permissions: string[];
+    }> = [];
+
+    // Check if user is an organizer (they are OWNER of their own team)
+    if (currentUser.role === "organizer" || currentUser.role === "admin") {
+      teamRoles.push({
+        organizerId: currentUser._id,
+        organizerName: currentUser.name || currentUser.email,
+        organizerEmail: currentUser.email,
+        role: ORGANIZER_TEAM_ROLES.OWNER,
+        permissions: [
+          "manage_events",
+          "manage_team",
+          "assign_roles",
+          "view_analytics",
+          "manage_payments",
+          "delete_team_members",
+          "view_payouts",
+          "manage_settings",
+        ],
+      });
+    }
+
+    // Find all org-wide team memberships (eventId = undefined)
+    const teamMemberships = await ctx.db
+      .query("eventStaff")
+      .withIndex("by_staff_user", (q) => q.eq("staffUserId", currentUser._id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("eventId"), undefined), // Org-wide memberships only
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .collect();
+
+    // Get organizer details for each membership
+    for (const membership of teamMemberships) {
+      const organizer = await ctx.db.get(membership.organizerId);
+      if (!organizer) continue;
+
+      // Skip if this is the same user (already added as OWNER)
+      if (organizer._id === currentUser._id) continue;
+
+      // Map staff role to organizer team role
+      let teamRole: OrganizerTeamRole;
+      let permissions: string[];
+
+      switch (membership.role) {
+        case STAFF_ROLES.MANAGER:
+          teamRole = ORGANIZER_TEAM_ROLES.MANAGER;
+          permissions = [
+            "manage_events",
+            "view_team",
+            "assign_staff",
+            "assign_volunteers",
+            "view_analytics",
+            "manage_staff_sales",
+          ];
+          break;
+        case STAFF_ROLES.STAFF:
+        case STAFF_ROLES.TEAM_MEMBERS:
+          teamRole = ORGANIZER_TEAM_ROLES.STAFF;
+          permissions = [
+            "view_events",
+            "scan_tickets",
+            "sell_tickets",
+            "view_own_stats",
+            "manage_door",
+          ];
+          break;
+        case STAFF_ROLES.SELLER:
+        case STAFF_ROLES.ASSOCIATES:
+        default:
+          teamRole = ORGANIZER_TEAM_ROLES.VOLUNTEER;
+          permissions = ["view_assigned_events", "scan_tickets"];
+          break;
+      }
+
+      teamRoles.push({
+        organizerId: organizer._id,
+        organizerName: organizer.name || organizer.email,
+        organizerEmail: organizer.email,
+        role: teamRole,
+        permissions,
+      });
+    }
+
+    return teamRoles;
+  },
+});
+
+/**
+ * Get the current user's organizer team role for a specific organizer
+ */
+export const getMyRoleForOrganizer = query({
+  args: {
+    organizerId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) {
+      return null;
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!currentUser) {
+      return null;
+    }
+
+    // Check if user is the organizer (OWNER)
+    if (currentUser._id === args.organizerId) {
+      return {
+        role: ORGANIZER_TEAM_ROLES.OWNER,
+        permissions: [
+          "manage_events",
+          "manage_team",
+          "assign_roles",
+          "view_analytics",
+          "manage_payments",
+          "delete_team_members",
+          "view_payouts",
+          "manage_settings",
+        ],
+      };
+    }
+
+    // Check for team membership
+    const teamMember = await ctx.db
+      .query("eventStaff")
+      .withIndex("by_organizer", (q) => q.eq("organizerId", args.organizerId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("staffUserId"), currentUser._id),
+          q.eq(q.field("eventId"), undefined), // Org-wide only
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .first();
+
+    if (!teamMember) {
+      return null;
+    }
+
+    // Map staff role to organizer team role
+    switch (teamMember.role) {
+      case STAFF_ROLES.MANAGER:
+        return {
+          role: ORGANIZER_TEAM_ROLES.MANAGER,
+          permissions: [
+            "manage_events",
+            "view_team",
+            "assign_staff",
+            "assign_volunteers",
+            "view_analytics",
+            "manage_staff_sales",
+          ],
+        };
+      case STAFF_ROLES.STAFF:
+      case STAFF_ROLES.TEAM_MEMBERS:
+        return {
+          role: ORGANIZER_TEAM_ROLES.STAFF,
+          permissions: [
+            "view_events",
+            "scan_tickets",
+            "sell_tickets",
+            "view_own_stats",
+            "manage_door",
+          ],
+        };
+      default:
+        return {
+          role: ORGANIZER_TEAM_ROLES.VOLUNTEER,
+          permissions: ["view_assigned_events", "scan_tickets"],
+        };
+    }
+  },
+});
+
+/**
+ * Get all team members for an organizer (org-wide staff)
+ * Used by organizers to manage their team
+ */
+export const getOrganizerTeamMembers = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) {
+      throw new Error("Authentication required");
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!currentUser) {
+      return [];
+    }
+
+    // Get all org-wide team members (eventId = undefined)
+    const teamMembers = await ctx.db
+      .query("eventStaff")
+      .withIndex("by_organizer", (q) => q.eq("organizerId", currentUser._id))
+      .filter((q) => q.eq(q.field("eventId"), undefined))
+      .collect();
+
+    // Enrich with user details and role mapping
+    const enrichedMembers = await Promise.all(
+      teamMembers.map(async (member) => {
+        const user = member.staffUserId
+          ? await ctx.db.get(member.staffUserId)
+          : null;
+
+        // Map staff role to organizer team role
+        let teamRole: OrganizerTeamRole;
+        switch (member.role) {
+          case STAFF_ROLES.MANAGER:
+            teamRole = ORGANIZER_TEAM_ROLES.MANAGER;
+            break;
+          case STAFF_ROLES.STAFF:
+          case STAFF_ROLES.TEAM_MEMBERS:
+            teamRole = ORGANIZER_TEAM_ROLES.STAFF;
+            break;
+          default:
+            teamRole = ORGANIZER_TEAM_ROLES.VOLUNTEER;
+            break;
+        }
+
+        return {
+          _id: member._id,
+          staffUserId: member.staffUserId,
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          role: member.role,
+          teamRole,
+          isActive: member.isActive,
+          canScan: member.canScan,
+          canAssignSubSellers: member.canAssignSubSellers,
+          createdAt: member.createdAt,
+          userDetails: user
+            ? {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+              }
+            : null,
+        };
+      })
+    );
+
+    return enrichedMembers;
   },
 });
