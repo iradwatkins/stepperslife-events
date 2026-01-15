@@ -23,7 +23,7 @@ export interface ExtractedEventData {
   state: string;
   zipCode?: string | null;
   categories: string[];
-  eventType: "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
+  eventType: "GENERAL_POSTING" | "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
   imageStorageId?: Id<"_storage">;
   flyerPreviewUrl?: string;
 }
@@ -147,7 +147,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
         state: extractedData.state || "",
         zipCode: extractedData.zipCode,
         categories: extractedData.categories || [],
-        eventType: extractedData.eventType || "TICKETED_EVENT",
+        eventType: extractedData.eventType || "GENERAL_POSTING",
         imageStorageId: storageId,
         flyerPreviewUrl: imageUrl,
       };

@@ -34,7 +34,7 @@ const AVAILABLE_CATEGORIES = [
   "Other",
 ];
 
-type EventType = "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
+type EventType = "GENERAL_POSTING" | "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
 
 interface ExtractedDataReviewProps {
   extractedData: ExtractedEventData;
@@ -67,7 +67,7 @@ export function ExtractedDataReview({
   const [state, setState] = useState(extractedData.state || "");
   const [zipCode, setZipCode] = useState(extractedData.zipCode || "");
   const [categories, setCategories] = useState<string[]>(extractedData.categories || []);
-  const [eventType, setEventType] = useState<EventType>(extractedData.eventType || "TICKETED_EVENT");
+  const [eventType, setEventType] = useState<EventType>(extractedData.eventType || "GENERAL_POSTING");
 
   // Calculate field status
   const getFieldStatus = (): Record<string, FieldStatus> => ({
@@ -367,6 +367,14 @@ export function ExtractedDataReview({
             </label>
             <div className="grid sm:grid-cols-2 gap-3">
               <EventTypeCard
+                type="GENERAL_POSTING"
+                title="General Posting"
+                description="Event information, no tickets required"
+                icon="📋"
+                selected={eventType === "GENERAL_POSTING"}
+                onClick={() => setEventType("GENERAL_POSTING")}
+              />
+              <EventTypeCard
                 type="TICKETED_EVENT"
                 title="Ticketed Event"
                 description="Sell tickets with general admission or tiers"
@@ -381,14 +389,6 @@ export function ExtractedDataReview({
                 icon="🪑"
                 selected={eventType === "SEATED_EVENT"}
                 onClick={() => setEventType("SEATED_EVENT")}
-              />
-              <EventTypeCard
-                type="FREE_EVENT"
-                title="Free Event"
-                description="Free RSVP, track attendance without payment"
-                icon="🎉"
-                selected={eventType === "FREE_EVENT"}
-                onClick={() => setEventType("FREE_EVENT")}
               />
               <EventTypeCard
                 type="SAVE_THE_DATE"
@@ -413,7 +413,7 @@ export function ExtractedDataReview({
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
-              Continue to {eventType === "SEATED_EVENT" ? "Seating Setup" : eventType === "TICKETED_EVENT" ? "Ticket Setup" : "Event Details"}
+              Continue to {eventType === "SEATED_EVENT" ? "Seating Setup" : eventType === "TICKETED_EVENT" ? "Ticket Setup" : "Review & Publish"}
               <ChevronRight className="w-5 h-5" />
             </button>
             {!isValid && (

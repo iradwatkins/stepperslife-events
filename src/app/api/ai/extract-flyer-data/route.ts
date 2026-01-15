@@ -43,7 +43,7 @@ interface ExtractedData {
   ageRestriction?: string | null;
   specialNotes?: string | null;
   containsSaveTheDateText: boolean;
-  eventType: "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE";
+  eventType: "GENERAL_POSTING" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "FREE_EVENT";
   categories: string[];
 }
 
@@ -162,8 +162,42 @@ After Phase 1 is complete, use the description text you extracted to fill out th
 16. CONTACT INFORMATION (contacts) - Array with name, phone, email, socialMedia
 17. SPECIAL NOTES (specialNotes) - Important notes not in other fields
 18. SAVE THE DATE CHECK (containsSaveTheDateText) - Boolean: true or false
-19. EVENT TYPE (eventType) - "FREE_EVENT", "TICKETED_EVENT", or "SAVE_THE_DATE"
+19. EVENT TYPE (eventType) - See EVENT TYPE DETECTION rules below
 20. EVENT CATEGORIES (categories) - Array: "Set", "Workshop", "Cruise", "Holiday Event", "Weekend Event"
+
+═══════════════════════════════════════════════════════════════════
+🎯 EVENT TYPE DETECTION (CRITICAL)
+═══════════════════════════════════════════════════════════════════
+
+You MUST determine eventType using these rules IN ORDER:
+
+1. **SAVE_THE_DATE**: If flyer contains "Save the Date" text → "SAVE_THE_DATE"
+2. **TICKETED_EVENT**: If flyer shows ticket prices ($XX, admission fee) → "TICKETED_EVENT"
+3. **GENERAL_POSTING**: DEFAULT for ALL other flyers → "GENERAL_POSTING"
+
+⚠️ IMPORTANT: "GENERAL_POSTING" is the DEFAULT. Most flyers are general event announcements.
+Only use "TICKETED_EVENT" if you see actual ticket prices or purchase information.
+
+═══════════════════════════════════════════════════════════════════
+⏰ TIME EXTRACTION (CRITICAL)
+═══════════════════════════════════════════════════════════════════
+
+**eventTime**: The START time (REQUIRED) - format HH:MM (24-hour)
+**eventEndTime**: The END time if shown - format HH:MM (24-hour)
+
+Look for end time indicators:
+- "7pm - 2am" → eventTime: "19:00", eventEndTime: "02:00"
+- "until 2am" → eventEndTime: "02:00"
+- "ends at midnight" → eventEndTime: "00:00"
+- Keywords: "until", "ends", "to", "-", "thru", "through"
+
+═══════════════════════════════════════════════════════════════════
+✅ FIELD PLACEMENT GUARANTEE
+═══════════════════════════════════════════════════════════════════
+
+EVERY piece of information extracted MUST be placed in its correct structured field.
+DO NOT leave fields empty if the information exists anywhere in the flyer.
+If unsure, make your best educated guess based on context.
 
 ═══════════════════════════════════════════════════════════════════
 📤 JSON OUTPUT FORMAT
@@ -177,7 +211,7 @@ Return this EXACT structure:
   "eventDate": "string (REQUIRED - YYYY-MM-DD format, e.g., '2026-01-15')",
   "eventEndDate": "string or null (YYYY-MM-DD format if present)",
   "eventTime": "string (REQUIRED - HH:MM 24-hour format, e.g., '19:00')",
-  "eventEndTime": "string or null",
+  "eventEndTime": "string or null (HH:MM 24-hour format if end time shown)",
   "eventTimezone": "string or null",
   "venueName": "string (REQUIRED)",
   "address": "string or null",
@@ -190,7 +224,7 @@ Return this EXACT structure:
   "ageRestriction": "string or null",
   "specialNotes": "string or null",
   "containsSaveTheDateText": boolean,
-  "eventType": "FREE_EVENT or TICKETED_EVENT or SAVE_THE_DATE",
+  "eventType": "GENERAL_POSTING (default) or TICKETED_EVENT or SAVE_THE_DATE",
   "categories": []
 }
 

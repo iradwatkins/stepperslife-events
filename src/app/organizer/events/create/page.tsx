@@ -18,7 +18,7 @@ import { format as formatDate } from "date-fns";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { motion, AnimatePresence } from "framer-motion";
 
-type EventType = "TICKETED_EVENT" | "FREE_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
+type EventType = "GENERAL_POSTING" | "TICKETED_EVENT" | "FREE_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
 
 // Wizard phases for upload-first flow
 type WizardPhase = "upload" | "review" | "wizard" | "manual";
@@ -48,8 +48,11 @@ function getStepsForEventType(eventType: EventType, hasPrefilledData: boolean): 
       case "SAVE_THE_DATE":
         // Minimal: just review (everything pre-filled)
         return [details, review];
+      case "GENERAL_POSTING":
+        // Skip basic info, go straight to details (no tickets needed)
+        return [details, review];
       case "FREE_EVENT":
-        // Skip basic info, go straight to details
+        // Legacy: same as GENERAL_POSTING
         return [details, review];
       case "TICKETED_EVENT":
         // Need tickets still
@@ -66,7 +69,11 @@ function getStepsForEventType(eventType: EventType, hasPrefilledData: boolean): 
   switch (eventType) {
     case "SAVE_THE_DATE":
       return [basicInfo, dateTime, location, review];
+    case "GENERAL_POSTING":
+      // Simple flow: basic info, date, location, details, review
+      return [basicInfo, dateTime, location, details, review];
     case "FREE_EVENT":
+      // Legacy: same as GENERAL_POSTING
       return [basicInfo, dateTime, location, details, review];
     case "TICKETED_EVENT":
       return [basicInfo, dateTime, location, tickets, details, review];
@@ -119,7 +126,7 @@ export default function CreateEventPage() {
 
   // Basic Information
   const [eventName, setEventName] = useState("");
-  const [eventType, setEventType] = useState<EventType>("TICKETED_EVENT");
+  const [eventType, setEventType] = useState<EventType>("GENERAL_POSTING");
   const [description, setDescription] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
 

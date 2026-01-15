@@ -65,7 +65,8 @@ export default defineSchema({
     eventType: v.optional(
       v.union(
         v.literal("SAVE_THE_DATE"),
-        v.literal("FREE_EVENT"),
+        v.literal("FREE_EVENT"),         // Legacy - kept for backward compatibility
+        v.literal("GENERAL_POSTING"),    // New default - information only, no tickets
         v.literal("TICKETED_EVENT"),
         v.literal("SEATED_EVENT"),
         v.literal("CLASS")

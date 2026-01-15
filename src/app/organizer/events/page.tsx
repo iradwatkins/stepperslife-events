@@ -1020,6 +1020,7 @@ export default function OrganizerEventsPage() {
               TICKETED_EVENT: "#3b82f6",
               TABLE_SEATING: "#8b5cf6",
               FREE_EVENT: "#22c55e",
+              GENERAL_POSTING: "#22c55e",
               RSVP_ONLY: "#f59e0b",
             }}
           />
