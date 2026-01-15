@@ -47,6 +47,7 @@
     "scripts/tests",
     "tests",
     "vitest.config.ts",
-    "e2e"
+    "e2e",
+    "check this folder"
   ]
 }

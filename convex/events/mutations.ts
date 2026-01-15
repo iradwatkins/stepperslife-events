@@ -14,6 +14,7 @@ export const createEvent = mutation({
     eventType: v.union(
       v.literal("TICKETED_EVENT"),
       v.literal("FREE_EVENT"),
+      v.literal("GENERAL_POSTING"),
       v.literal("SAVE_THE_DATE"),
       v.literal("SEATED_EVENT"),
       v.literal("CLASS")
@@ -305,6 +306,7 @@ export const createEventOnBehalfOf = mutation({
     eventType: v.union(
       v.literal("TICKETED_EVENT"),
       v.literal("FREE_EVENT"),
+      v.literal("GENERAL_POSTING"),
       v.literal("SAVE_THE_DATE"),
       v.literal("SEATED_EVENT"),
       v.literal("CLASS")
