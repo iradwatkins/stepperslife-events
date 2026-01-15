@@ -2146,6 +2146,7 @@ export default defineSchema({
 
     // Delivery status
     status: v.union(
+      v.literal("PENDING"),
       v.literal("SENT"),
       v.literal("DELIVERED"),
       v.literal("FAILED"),

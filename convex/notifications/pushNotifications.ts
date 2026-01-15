@@ -4,8 +4,18 @@
  */
 
 import { v } from "convex/values";
-import { action, internalMutation } from "../_generated/server";
+import { action, internalMutation, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+
+// Get the base URL for API calls
+const getBaseUrl = () => {
+  // In production, use the actual domain
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  // Fallback to production URL
+  return "https://stepperslife.com";
+};
 
 /**
  * Send push notification to staff about new cash order
@@ -160,15 +170,10 @@ export const sendToStaff = internalMutation({
     let sentCount = 0;
     let failedCount = 0;
 
-    // For each subscription, we'll log it and mark as sent
-    // In a real implementation, you'd use web-push library here
-    // But Convex doesn't support Node.js crypto, so we'll need to use an HTTP action
+    // Schedule push delivery for each subscription
     for (const sub of enabledSubscriptions) {
       try {
-        // TODO: Call external web-push service or use HTTP action
-        // For now, just log the notification
-
-        // Log notification in database
+        // Log notification in database (status PENDING until delivery confirms)
         await ctx.db.insert("notificationLog", {
           staffId: args.staffId,
           type: args.type,
@@ -176,19 +181,29 @@ export const sendToStaff = internalMutation({
           body: args.body,
           orderId: args.orderId,
           eventId: args.eventId,
-          status: "SENT",
+          status: "PENDING",
           sentAt: now,
         });
 
-        // Update last used timestamp
-        await ctx.db.patch(sub._id, {
-          lastUsed: now,
-          updatedAt: now,
+        // Schedule the actual push delivery via HTTP action
+        await ctx.scheduler.runAfter(0, internal.notifications.pushNotifications.deliverPushNotification, {
+          subscriptionId: sub._id,
+          endpoint: sub.endpoint,
+          keys: sub.keys,
+          title: args.title,
+          body: args.body,
+          data: {
+            type: args.type,
+            orderId: args.orderId,
+            eventId: args.eventId,
+            url: args.orderId ? `/orders/${args.orderId}` : undefined,
+          },
+          tag: args.orderId ? `order-${args.orderId}` : undefined,
         });
 
         sentCount++;
       } catch (error) {
-        console.error(`[sendToStaff] Failed to send to subscription ${sub._id}:`, error);
+        console.error(`[sendToStaff] Failed to schedule push for subscription ${sub._id}:`, error);
 
         // Log failed notification
         await ctx.db.insert("notificationLog", {
@@ -201,15 +216,6 @@ export const sendToStaff = internalMutation({
           status: "FAILED",
           error: error instanceof Error ? error.message : "Unknown error",
           sentAt: now,
-        });
-
-        // Increment failure count
-        const newFailureCount = (sub.failureCount || 0) + 1;
-        await ctx.db.patch(sub._id, {
-          failureCount: newFailureCount,
-          // Deactivate after 5 failures
-          isActive: newFailureCount < 5,
-          updatedAt: now,
         });
 
         failedCount++;
@@ -247,5 +253,136 @@ export const sendTestNotification = action({
       sent: result.sent,
       failed: result.failed || 0,
     };
+  },
+});
+
+/**
+ * Internal action: Deliver push notification via HTTP to Next.js API
+ * This is called by sendToStaff for each subscription
+ */
+export const deliverPushNotification = internalAction({
+  args: {
+    subscriptionId: v.id("pushSubscriptions"),
+    endpoint: v.string(),
+    keys: v.object({
+      p256dh: v.string(),
+      auth: v.string(),
+    }),
+    title: v.string(),
+    body: v.string(),
+    data: v.optional(v.any()),
+    tag: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const baseUrl = getBaseUrl();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/push/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscription: {
+            endpoint: args.endpoint,
+            keys: args.keys,
+          },
+          notification: {
+            title: args.title,
+            body: args.body,
+            data: args.data || {},
+            tag: args.tag,
+            requireInteraction: true,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      // Update subscription status based on result
+      if (result.expired) {
+        // Mark subscription as inactive if expired
+        await ctx.runMutation(internal.notifications.pushNotifications.markSubscriptionExpired, {
+          subscriptionId: args.subscriptionId,
+        });
+        return { success: false, expired: true };
+      }
+
+      if (!response.ok) {
+        // Increment failure count
+        await ctx.runMutation(internal.notifications.pushNotifications.incrementFailureCount, {
+          subscriptionId: args.subscriptionId,
+        });
+        return { success: false, error: result.error };
+      }
+
+      // Success - update lastUsed timestamp
+      await ctx.runMutation(internal.notifications.pushNotifications.markSubscriptionUsed, {
+        subscriptionId: args.subscriptionId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("[deliverPushNotification] HTTP error:", error);
+
+      // Increment failure count on network errors
+      await ctx.runMutation(internal.notifications.pushNotifications.incrementFailureCount, {
+        subscriptionId: args.subscriptionId,
+      });
+
+      return { success: false, error: error instanceof Error ? error.message : "Network error" };
+    }
+  },
+});
+
+/**
+ * Internal mutation: Mark subscription as expired/inactive
+ */
+export const markSubscriptionExpired = internalMutation({
+  args: {
+    subscriptionId: v.id("pushSubscriptions"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.subscriptionId, {
+      isActive: false,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Internal mutation: Increment failure count on subscription
+ */
+export const incrementFailureCount = internalMutation({
+  args: {
+    subscriptionId: v.id("pushSubscriptions"),
+  },
+  handler: async (ctx, args) => {
+    const sub = await ctx.db.get(args.subscriptionId);
+    if (!sub) return;
+
+    const newFailureCount = (sub.failureCount || 0) + 1;
+    await ctx.db.patch(args.subscriptionId, {
+      failureCount: newFailureCount,
+      // Deactivate after 5 consecutive failures
+      isActive: newFailureCount < 5,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Internal mutation: Mark subscription as successfully used
+ */
+export const markSubscriptionUsed = internalMutation({
+  args: {
+    subscriptionId: v.id("pushSubscriptions"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.subscriptionId, {
+      lastUsed: Date.now(),
+      failureCount: 0, // Reset failure count on success
+      updatedAt: Date.now(),
+    });
   },
 });
