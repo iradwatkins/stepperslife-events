@@ -456,9 +456,13 @@ export default function CreateEventPage() {
       const eventDateLiteral = formatDate(startDateObj, "MMMM d, yyyy");
       const eventTimeLiteral = formatDate(startDateObj, "h:mm a");
 
+      // Map GENERAL_POSTING to FREE_EVENT until Convex functions are deployed
+      // TODO: Remove this mapping once convex/events/mutations.ts is deployed with GENERAL_POSTING support
+      const backendEventType = eventType === "GENERAL_POSTING" ? "FREE_EVENT" : eventType;
+
       const eventData = {
         name: eventName,
-        eventType,
+        eventType: backendEventType,
         description,
         categories,
         startDate: startDateUTC,
