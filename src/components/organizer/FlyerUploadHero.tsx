@@ -25,6 +25,7 @@ export interface ExtractedEventData {
   categories: string[];
   eventType: "FREE_EVENT" | "TICKETED_EVENT" | "SAVE_THE_DATE" | "SEATED_EVENT";
   imageStorageId?: Id<"_storage">;
+  flyerPreviewUrl?: string;
 }
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "extracting" | "success" | "error";
@@ -148,6 +149,7 @@ export function FlyerUploadHero({ onDataExtracted, onSkip, onError }: FlyerUploa
         categories: extractedData.categories || [],
         eventType: extractedData.eventType || "TICKETED_EVENT",
         imageStorageId: storageId,
+        flyerPreviewUrl: imageUrl,
       };
 
       // Small delay to show success state

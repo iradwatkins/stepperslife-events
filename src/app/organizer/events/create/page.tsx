@@ -279,6 +279,11 @@ export default function CreateEventPage() {
       setUploadedImageId(data.imageStorageId);
     }
 
+    // Set the flyer preview URL
+    if (data.flyerPreviewUrl) {
+      setFlyerPreviewUrl(data.flyerPreviewUrl);
+    }
+
     // Move to review phase
     setHasPrefilledData(true);
     setWizardPhase("review");
