@@ -148,12 +148,6 @@ export function ExtractedDataReview({
                   alt="Event flyer"
                   className="w-full h-full object-cover"
                 />
-              ) : extractedData.imageStorageId ? (
-                <img
-                  src={`https://convex.toolboxhosting.com/api/storage/${extractedData.imageStorageId}`}
-                  alt="Event flyer"
-                  className="w-full h-full object-cover"
-                />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
                   <ImageIcon className="w-12 h-12 mb-2" />

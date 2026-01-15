@@ -141,8 +141,8 @@ After Phase 1 is complete, use the description text you extracted to fill out th
 
 1. DESCRIPTION (description) - ALL visible text from the flyer with proper formatting
 2. EVENT NAME (eventName) - The main title, theme, or name of the event
-3. EVENT DATE (eventDate) - Extract EXACTLY as shown on flyer - DO NOT REFORMAT
-4. EVENT TIME (eventTime) - Format as "H:MM PM" or "H:MM AM"
+3. EVENT DATE (eventDate) - MUST be in YYYY-MM-DD format (e.g., "2026-01-15"). Convert any date format to this ISO format.
+4. EVENT TIME (eventTime) - MUST be in 24-hour HH:MM format (e.g., "19:00" for 7:00 PM). Convert any time to this format.
 5. VENUE NAME (venueName) - The name of the location/club/venue
 6. CITY (city) - Extract the city name
 7. STATE (state) - Extract state as 2-letter abbreviation
@@ -174,9 +174,9 @@ Return this EXACT structure:
 {
   "description": "string (REQUIRED - ALL text from flyer)",
   "eventName": "string (REQUIRED)",
-  "eventDate": "string (REQUIRED - EXACT text as shown on flyer)",
-  "eventEndDate": "string or null",
-  "eventTime": "string (REQUIRED - formatted as 'H:MM PM/AM')",
+  "eventDate": "string (REQUIRED - YYYY-MM-DD format, e.g., '2026-01-15')",
+  "eventEndDate": "string or null (YYYY-MM-DD format if present)",
+  "eventTime": "string (REQUIRED - HH:MM 24-hour format, e.g., '19:00')",
   "eventEndTime": "string or null",
   "eventTimezone": "string or null",
   "venueName": "string (REQUIRED)",
