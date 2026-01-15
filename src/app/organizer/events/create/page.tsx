@@ -783,7 +783,7 @@ export default function CreateEventPage() {
                         <p className="font-semibold text-foreground">Account Restriction</p>
                         <p className="text-muted-foreground mt-1">
                           Your account can only create <strong>Save The Date</strong> and{" "}
-                          <strong>Free Events</strong>.
+                          <strong>General Postings</strong>.
                         </p>
                       </div>
                     </div>
@@ -792,13 +792,13 @@ export default function CreateEventPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {[
+                    { type: "GENERAL_POSTING" as EventType, label: "General Posting", desc: "Event info, no tickets", icon: "📋" },
                     canCreateTicketedEvents
                       ? { type: "TICKETED_EVENT" as EventType, label: "Ticketed Event", desc: "Sell tickets online", icon: "🎫" }
                       : null,
                     canCreateTicketedEvents
                       ? { type: "SEATED_EVENT" as EventType, label: "Seated Event", desc: "Table seating & tickets", icon: "🪑" }
                       : null,
-                    { type: "FREE_EVENT" as EventType, label: "Pay at the Door", desc: "Pay at the door", icon: "🎉" },
                     { type: "SAVE_THE_DATE" as EventType, label: "Save the Date", desc: "Announcement only", icon: "📅" },
                   ]
                     .filter(Boolean)

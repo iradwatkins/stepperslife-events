@@ -18,10 +18,11 @@ interface EventFiltersProps {
 
 const EVENT_TYPES = [
   { value: "all", label: "All Types" },
+  { value: "GENERAL_POSTING", label: "General Posting" },
   { value: "TICKETED_EVENT", label: "Ticketed Event" },
-  { value: "FREE_EVENT", label: "Free Event" },
   { value: "SEATED_EVENT", label: "Seated Event" },
   { value: "SAVE_THE_DATE", label: "Save the Date" },
+  { value: "FREE_EVENT", label: "Free Event (Legacy)" },
 ];
 
 const EVENT_SUB_TYPES = [
