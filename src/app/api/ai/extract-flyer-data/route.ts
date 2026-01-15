@@ -398,8 +398,8 @@ async function extractWithGemini(
     throw new Error("Gemini API not configured - GEMINI_API_KEY required");
   }
 
-  // Use Gemini 1.5 Flash for fast, accurate vision extraction
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Use Gemini 2.0 Flash for fast, accurate vision extraction
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const result = await model.generateContent([
     EXTRACTION_PROMPT,
@@ -418,7 +418,7 @@ async function extractWithGemini(
     throw new Error("No response from Gemini");
   }
 
-  return parseExtractionResponse(extractedText, "gemini-1.5-flash");
+  return parseExtractionResponse(extractedText, "gemini-2.0-flash");
 }
 
 /**
@@ -537,7 +537,7 @@ export async function GET() {
     try {
       const genAI = new GoogleGenerativeAI(geminiApiKey);
       // Simple check - try to get the model
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       geminiAvailable = !!model;
     } catch {
       geminiAvailable = false;
@@ -549,11 +549,11 @@ export async function GET() {
       gemini: {
         available: geminiAvailable,
         configured: geminiConfigured,
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         description: "Google Gemini AI - Fast and accurate vision model",
       },
     },
-    strategy: "Google Gemini (gemini-1.5-flash)",
+    strategy: "Google Gemini (gemini-2.0-flash)",
     recommendation: geminiAvailable ? "gemini" : "none",
   });
 }
