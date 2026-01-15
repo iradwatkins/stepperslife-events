@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { DollarSign, Bell, Check, AlertCircle, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
+import { PushSubscribeButton } from "@/components/notifications/PushSubscribeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,21 @@ export default function StaffSettingsPage() {
             make purchases or cash payment requests. You'll need to grant permission when prompted.
           </p>
         </div>
+
+        {/* Push Subscribe Button */}
+        {selectedEventId && staffPositions && staffPositions.length > 0 && (
+          <div className="mb-4">
+            <PushSubscribeButton
+              staffId={
+                staffPositions.find((pos) => pos.eventId === selectedEventId)
+                  ?.staffId as Id<"eventStaff">
+              }
+              variant="default"
+              size="lg"
+              className="w-full"
+            />
+          </div>
+        )}
 
         <div className="space-y-4">
           {/* Cash Orders */}
