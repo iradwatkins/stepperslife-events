@@ -326,21 +326,68 @@ export class PermissionChecker {
   // ==========================================
 
   /**
-   * Check if user can CREATE content as the owner
-   * KEY RULE: Admins CANNOT create content where they become the owner
-   * Admin role is for management only - they cannot BE organizers/vendors/etc.
-   *
-   * Use this check in creation mutations (createEvent, apply for vendor, etc.)
-   * to block admins from creating content with themselves as owner.
-   *
-   * For admins to create content, use the "OnBehalfOf" mutations which
-   * require specifying a different user as the owner.
+   * Event types that admins are ALLOWED to create and own
+   * These are informational/promotional posts only - no ticketing, no enrollment
    */
-  static canCreateContentAsOwner(user: Doc<"users"> | null | undefined): boolean {
+  static readonly ADMIN_ALLOWED_EVENT_TYPES = [
+    "GENERAL_POSTING",
+    "FREE_EVENT",
+    "SAVE_THE_DATE",
+    "CLASS", // Admin can post class info, but class won't have enrollment
+  ] as const;
+
+  /**
+   * Event types that are BLOCKED for admins
+   * These require payment processing which admins cannot own
+   */
+  static readonly ADMIN_BLOCKED_EVENT_TYPES = [
+    "TICKETED_EVENT",
+    "SEATED_EVENT",
+  ] as const;
+
+  /**
+   * Check if user can CREATE content as the owner
+   *
+   * ADMIN RULES (Updated):
+   * - Admins CAN create and own INFORMATIONAL posts (GENERAL_POSTING, FREE_EVENT, SAVE_THE_DATE, CLASS)
+   * - Admins CANNOT create TICKETED_EVENT or SEATED_EVENT (payment required)
+   * - For ticketed events, organizers must create them directly
+   * - Admin-posted content can be "claimed" by organizers later to add ticketing
+   *
+   * @param user The user attempting to create content
+   * @param eventType Optional - the type of event being created
+   */
+  static canCreateContentAsOwner(
+    user: Doc<"users"> | null | undefined,
+    eventType?: string
+  ): boolean {
     if (!user) return false;
-    // Admins CANNOT own content - they must use OnBehalfOf mutations
-    if (this.isAdmin(user)) return false;
+
+    // Non-admins can always create content they're authorized for
+    if (!this.isAdmin(user)) return true;
+
+    // Admin check: if eventType provided, verify it's allowed
+    if (eventType) {
+      return (this.ADMIN_ALLOWED_EVENT_TYPES as readonly string[]).includes(eventType);
+    }
+
+    // Without eventType context, default to allowed for backwards compatibility
+    // (actual event type check happens in the mutation)
     return true;
+  }
+
+  /**
+   * Check if admin can create a specific event type
+   */
+  static canAdminCreateEventType(eventType: string): boolean {
+    return (this.ADMIN_ALLOWED_EVENT_TYPES as readonly string[]).includes(eventType);
+  }
+
+  /**
+   * Check if an event type is blocked for admins
+   */
+  static isEventTypeBlockedForAdmin(eventType: string): boolean {
+    return (this.ADMIN_BLOCKED_EVENT_TYPES as readonly string[]).includes(eventType);
   }
 
   /**
@@ -354,22 +401,34 @@ export class PermissionChecker {
 
   /**
    * Check if a target user can be an owner of content
-   * Admins cannot be owners even when another admin creates content for them
+   *
+   * Updated: Admins CAN own informational content (GENERAL_POSTING, etc.)
+   * They just cannot own content that requires payment processing.
    */
-  static canBeContentOwner(user: Doc<"users"> | null | undefined): boolean {
+  static canBeContentOwner(
+    user: Doc<"users"> | null | undefined,
+    eventType?: string
+  ): boolean {
     if (!user) return false;
-    // Admin accounts cannot be content owners
-    if (this.isAdmin(user)) return false;
+
+    // Non-admins can be owners
+    if (!this.isAdmin(user)) return true;
+
+    // Admins can own informational content
+    if (eventType) {
+      return (this.ADMIN_ALLOWED_EVENT_TYPES as readonly string[]).includes(eventType);
+    }
+
     return true;
   }
 
   /**
-   * Get error message for admin trying to create content
+   * Get error message for admin trying to create blocked content
    */
   static getAdminCannotOwnContentError(contentType: string): string {
-    return `Admins cannot create ${contentType} for themselves. ` +
-      `Admin accounts are for platform management only and cannot own ${contentType}. ` +
-      `Use the admin "Create On Behalf Of" feature to create ${contentType} for a specific user.`;
+    return `Admins cannot create ${contentType} with ticketing. ` +
+      `Admin accounts can only post informational content (flyers). ` +
+      `For ticketed events, the organizer must create them directly.`;
   }
 }
 
