@@ -96,18 +96,30 @@ export const createEvent = mutation({
       // Get authenticated user
       const user = await getCurrentUser(ctx);
 
-      // ROLE-BASED ACCESS CONTROL: Separate instructors from organizers
-      // Classes can only be created by instructors
-      // Events can only be created by organizers
-      // NOTE: Admins CANNOT create content as themselves - they must use createEventOnBehalfOf
-      if (args.eventType === "CLASS") {
+      // ROLE-BASED ACCESS CONTROL: Separate instructors, organizers, and admins
+      // - Instructors create classes with full enrollment capabilities
+      // - Organizers create events with full ticketing capabilities
+      // - Admins can ONLY create INFORMATIONAL posts (flyers) - no tickets, no enrollment
+      //   This includes: events, classes, any content type - but purely informational
+      if (user.role === "admin") {
+        // Admin can create informational posts for events AND classes
+        // They post basic info: name, date, location, price, description
+        // NO ticketing, NO enrollment - just readable information for visitors
+        const blockedAdminTypes = ["TICKETED_EVENT", "SEATED_EVENT"];
+        if (blockedAdminTypes.includes(args.eventType)) {
+          throw new Error(
+            "Admins can only create informational posts (flyers). " +
+            "For ticketed events, the organizer must create them directly."
+          );
+        }
+      } else if (args.eventType === "CLASS") {
         if (user.role !== "instructor") {
           throw new Error(
             "Only instructors can create classes. Please switch to an instructor account or contact support."
           );
         }
       } else {
-        // Non-CLASS events (TICKETED_EVENT, FREE_EVENT, SAVE_THE_DATE, SEATED_EVENT)
+        // Non-CLASS events (TICKETED_EVENT, FREE_EVENT, SAVE_THE_DATE, SEATED_EVENT, GENERAL_POSTING)
         if (user.role !== "organizer") {
           throw new Error(
             "Only organizers can create events. Please switch to an organizer account or contact support."
@@ -372,6 +384,17 @@ export const createEventOnBehalfOf = mutation({
     await requireAdmin(ctx);
     console.log("[createEventOnBehalfOf] Admin creating event for owner:", args.ownerId);
 
+    // ADMIN RESTRICTION: Admins can only create informational posts (flyers)
+    // They CANNOT create ticketed/seated events - only informational content
+    // Admin CAN post class info (location, date, cost) - purely informational
+    const restrictedTypes = ["TICKETED_EVENT", "SEATED_EVENT"];
+    if (restrictedTypes.includes(args.eventType)) {
+      throw new Error(
+        "Admins can only create informational posts (flyers). " +
+        "For ticketed events, the organizer must create them directly."
+      );
+    }
+
     // Get the specified owner
     const owner = await ctx.db.get(args.ownerId);
     if (!owner) {
@@ -395,7 +418,7 @@ export const createEventOnBehalfOf = mutation({
       }
     }
 
-    // Check if owner can create ticketed events
+    // Check if owner can create ticketed events (kept for future flexibility)
     if (
       (args.eventType === "TICKETED_EVENT" || args.eventType === "SEATED_EVENT") &&
       owner.canCreateTicketedEvents === false
